@@ -24,3 +24,8 @@ a { color: var(--accent); }
 .atividades .texto { flex: 1; }
 .atividades .volta { font-variant-numeric: tabular-nums; color: var(--muted); }
 .atividades .feita .texto { color: var(--muted); text-decoration: line-through; }
+.recorde { color: var(--muted); margin: -.5rem 0 1rem; font-variant-numeric: tabular-nums; }
+.delta { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 3.5rem; text-align: right; }
+.delta.melhor { color: var(--ok); }
+.delta.pior { color: var(--bad); }
+.delta.igual { color: var(--muted); }

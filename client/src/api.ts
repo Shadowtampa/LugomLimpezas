@@ -1,7 +1,7 @@
 export type PopProblem = { file: string; line?: number; message: string };
 export type EnvironmentItem = { slug: string; name?: string; error?: PopProblem };
 
-export type Atividade = { text: string; done: boolean; lapMs?: number };
+export type Atividade = { text: string; done: boolean; lapMs?: number; recordMs?: number; deltaMs?: number };
 export type Etapa = { titulo: string; objetivo: string; aviso?: string; atividades: Atividade[] };
 export type CleaningView = {
   id: string;
