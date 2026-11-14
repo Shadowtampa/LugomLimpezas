@@ -19,7 +19,7 @@ Um bloco do POP com título, objetivo e às vezes um aviso. A ordem serve de ori
 _Avoid_: fase, seção
 
 **Atividade**:
-Uma ação do POP, identificada pelo próprio texto: com um texto novo, é uma Atividade nova.
+Uma ação do POP, identificada pelo próprio texto: com um texto novo, é uma Atividade nova. Pode ter uma descrição curta, só para exibição: mudar a descrição não muda a Atividade.
 _Avoid_: item, tarefa
 
 ### Limpeza

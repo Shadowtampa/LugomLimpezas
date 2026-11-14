@@ -62,7 +62,8 @@ etapas[2]:
     objetivo: liberar as superfícies e preparar o ambiente para a limpeza.
     atividades[2]:
       - Retirar copos, garrafas, pratos e utensílios de alimentação.
-      - Recolher papéis, documentos e objetos espalhados.
+      - texto: Recolher papéis, documentos e objetos espalhados.
+        descricao: Junte tudo numa pilha para triar depois.
   - titulo: Limpeza do piso e finalização
     objetivo: concluir a higienização.
     aviso: A limpeza do piso deve ser feita após as demais atividades.
@@ -72,6 +73,9 @@ etapas[2]:
 
 - `ambiente` e `etapas` (pelo menos uma) são obrigatórios; cada etapa tem
   `titulo`, `objetivo`, `atividades` (pelo menos uma) e `aviso` opcional.
+- Uma atividade é um texto simples ou um objeto com `texto` e `descricao`
+  (opcional); os dois formatos podem se misturar. A descrição aparece na
+  atividade atual e na lista, e editá-la não zera o recorde.
 - O texto de uma atividade não pode se repetir no arquivo: é ele que a identifica.
   Editar o texto cria uma atividade nova, com recorde zerado.
 - Os contadores `[N]` não são exigidos.
