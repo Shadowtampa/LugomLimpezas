@@ -407,7 +407,7 @@ lugom-limpezas/
   `pops/` para lá. Um `git pull` nunca toca em `data/`.
 - **Serviço:** `lugom-limpezas.service` (unidade do sistema) roda como o
   usuário dono do clone, com `Restart=always`, sobe com a máquina e escuta na
-  porta `10060`, em todas as interfaces.
+  porta `10061`, em todas as interfaces.
 - **`install.sh` (uma vez, com sudo):** instala a unidade systemd, habilita o
   serviço e cria uma regra em `sudoers.d` que permite ao usuário rodar só
   `systemctl restart lugom-limpezas` e `systemctl status lugom-limpezas` sem
@@ -459,7 +459,7 @@ No frontend: o cálculo da atividade atual e da próxima.
 - [ ] É possível importar um `.toon`, com confirmação antes de substituir.
 - [ ] **Baixar .toon** entrega o arquivo com as edições feitas.
 - [ ] O serviço systemd sobe com a máquina, reinicia sozinho se cair e
-  responde na porta `10060`.
+  responde na porta `10061`.
 - [ ] `deploy.sh` atualiza o app sem tocar em `data/` e termina com erro se o
   serviço não responder.
 - [ ] O README explica como rodar localmente, como instalar e atualizar no

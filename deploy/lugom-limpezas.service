@@ -1,0 +1,15 @@
+[Unit]
+Description=Lugom Limpezas
+After=network.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@DIR@
+Environment=NODE_ENV=production
+ExecStart=@DIR@/.node/bin/node server/src/index.ts
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
