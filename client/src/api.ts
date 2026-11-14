@@ -23,11 +23,20 @@ export type CleaningView = {
   etapas: Etapa[];
   progress: { done: number; total: number };
 };
+export type HistoryItem = {
+  id: string;
+  startedAt: string;
+  status: 'in_progress' | 'completed' | 'abandoned';
+  totalMs: number;
+  done: number;
+  total: number;
+};
 export type EnvironmentView = {
   slug: string;
   name: string;
   inProgress: { id: string; startedAt: string; done: number; total: number } | null;
   fastestMs: number | null;
+  history: HistoryItem[];
 };
 
 export class ApiError extends Error {

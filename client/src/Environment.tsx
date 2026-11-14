@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api, type EnvironmentView } from './api.ts';
-import { formatDayMonth, formatDuration } from './format.ts';
+import { formatDate, formatDayMonth, formatDuration } from './format.ts';
+
+const STATUS = { in_progress: '▶ Em andamento', completed: '✓ Concluída', abandoned: '✕ Abandonada' } as const;
 
 export function Environment({ slug }: { slug: string }) {
   const [env, setEnv] = useState<EnvironmentView | null>(null);
@@ -62,6 +64,22 @@ export function Environment({ slug }: { slug: string }) {
               </button>
             </div>
           )}
+          <h2 id="historico">Histórico</h2>
+          {env.history.length === 0 ? (
+            <p>Nenhuma limpeza ainda.</p>
+          ) : (
+            <ul className="historico" aria-labelledby="historico">
+              {env.history.map((h) => (
+                <li key={h.id} className={`status-${h.status}`}>
+                  <span className="data">{formatDate(h.startedAt)}</span>
+                  <span className="status">{STATUS[h.status]}</span>
+                  <span className="tempo-hist">{formatDuration(h.totalMs)}</span>
+                  <span className="prog">{h.done}/{h.total}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
           <div className="acoes">
             <a className="botao" href={`#/a/${slug}/editar`}>Editar POP</a>
             <a className="botao" href={`/api/environments/${slug}/pop.toon`} download>Baixar .toon</a>
