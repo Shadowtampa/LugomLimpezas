@@ -9,6 +9,7 @@ import { listEnvironments } from './pops.ts';
 
 export type Config = Deps & { clientDir?: string };
 
+const StartBody = z.object({ abandonCurrent: z.boolean().optional() });
 const TaskBody = z.object({ task: z.string().min(1), done: z.boolean() });
 
 export function createApp(cfg: Config) {
@@ -17,7 +18,11 @@ export function createApp(cfg: Config) {
 
   app.get('/api/environments', (_req, res) => { res.json(listEnvironments(cfg.popsDir)); });
   app.get('/api/environments/:slug', (req, res) => { res.json(environmentView(cfg, req.params.slug)); });
-  app.post('/api/environments/:slug/cleanings', (req, res) => { res.status(201).json(startCleaning(cfg, req.params.slug)); });
+  app.post('/api/environments/:slug/cleanings', (req, res) => {
+    const body = StartBody.safeParse(req.body ?? {});
+    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { abandonCurrent? }');
+    res.status(201).json(startCleaning(cfg, req.params.slug, body.data.abandonCurrent));
+  });
   app.get('/api/cleanings/:id', (req, res) => { res.json(cleaningView(cfg, req.params.id)); });
   app.post('/api/cleanings/:id/pause', (req, res) => { res.json(pauseCleaning(cfg, req.params.id)); });
   app.post('/api/cleanings/:id/resume', (req, res) => { res.json(resumeCleaning(cfg, req.params.id)); });

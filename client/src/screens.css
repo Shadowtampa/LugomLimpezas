@@ -37,3 +37,5 @@ a { color: var(--accent); }
 .recordes-batidos { padding-left: 1.2rem; }
 .recordes-batidos li { margin: .35rem 0; }
 .dica { color: var(--muted); font-size: .9rem; }
+.confirmacao { border-color: var(--accent); }
+.confirmacao p { margin-top: 0; font-weight: 600; }

@@ -1,27 +1,30 @@
 import { useEffect, useState } from 'react';
 import { api, type EnvironmentView } from './api.ts';
-import { formatDuration } from './format.ts';
+import { formatDayMonth, formatDuration } from './format.ts';
 
 export function Environment({ slug }: { slug: string }) {
   const [env, setEnv] = useState<EnvironmentView | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     api<EnvironmentView>(`/environments/${slug}`).then(setEnv, (e: Error) => setError(e.message));
   }, [slug]);
 
-  async function start() {
+  async function start(abandonCurrent: boolean) {
     if (busy) return;
     setBusy(true);
     try {
-      const { id } = await api<{ id: string }>(`/environments/${slug}/cleanings`, { method: 'POST', body: {} });
+      const { id } = await api<{ id: string }>(`/environments/${slug}/cleanings`, { method: 'POST', body: { abandonCurrent } });
       location.hash = `#/l/${id}`;
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
     }
   }
+
+  const cur = env?.inProgress;
 
   return (
     <>
@@ -32,17 +35,33 @@ export function Environment({ slug }: { slug: string }) {
         <>
           <h1>{env.name}</h1>
           <p className="mais-rapida">
-            Limpeza mais rápida: {env.fastestMs !== null ? <strong>{formatDuration(env.fastestMs)}</strong> : "ainda não há"}
+            Limpeza mais rápida: {env.fastestMs !== null ? <strong>{formatDuration(env.fastestMs)}</strong> : 'ainda não há'}
           </p>
-          <div className="acoes">
-            {env.inProgress ? (
-              <a className="botao primario" href={`#/l/${env.inProgress.id}`}>
-                Continuar limpeza ({env.inProgress.done}/{env.inProgress.total})
-              </a>
-            ) : (
-              <button className="botao primario" onClick={start} disabled={busy}>Iniciar limpeza</button>
-            )}
-          </div>
+
+          {confirming && cur ? (
+            <div className="card confirmacao" role="alertdialog" aria-labelledby="confirma-txt">
+              <p id="confirma-txt">
+                A limpeza de {formatDayMonth(cur.startedAt)} ({cur.done}/{cur.total}) será marcada como abandonada. Continuar?
+              </p>
+              <div className="acoes">
+                <button className="botao primario" onClick={() => start(true)} disabled={busy} autoFocus>Continuar</button>
+                <button className="botao" onClick={() => setConfirming(false)} disabled={busy}>Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <div className="acoes">
+              {cur && (
+                <a className="botao primario" href={`#/l/${cur.id}`}>Continuar limpeza ({cur.done}/{cur.total})</a>
+              )}
+              <button
+                className={cur ? 'botao' : 'botao primario'}
+                onClick={() => (cur ? setConfirming(true) : start(false))}
+                disabled={busy}
+              >
+                Iniciar limpeza
+              </button>
+            </div>
+          )}
         </>
       )}
     </>
