@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type EnvironmentView } from './api.ts';
+import { formatDuration } from './format.ts';
 
 export function Environment({ slug }: { slug: string }) {
   const [env, setEnv] = useState<EnvironmentView | null>(null);
@@ -30,6 +31,9 @@ export function Environment({ slug }: { slug: string }) {
       {env && (
         <>
           <h1>{env.name}</h1>
+          <p className="mais-rapida">
+            Limpeza mais rápida: {env.fastestMs !== null ? <strong>{formatDuration(env.fastestMs)}</strong> : "ainda não há"}
+          </p>
           <div className="acoes">
             {env.inProgress ? (
               <a className="botao primario" href={`#/l/${env.inProgress.id}`}>

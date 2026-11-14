@@ -3,6 +3,13 @@ export type EnvironmentItem = { slug: string; name?: string; error?: PopProblem 
 
 export type Atividade = { text: string; done: boolean; lapMs?: number; recordMs?: number; deltaMs?: number };
 export type Etapa = { titulo: string; objetivo: string; aviso?: string; atividades: Atividade[] };
+export type CleaningResult = {
+  totalMs: number;
+  fastestOtherMs: number | null;
+  diffMs: number | null;
+  newRecord: boolean;
+  brokenRecords: { text: string; lapMs: number; recordMs: number }[];
+};
 export type CleaningView = {
   id: string;
   environment: string;
@@ -11,6 +18,8 @@ export type CleaningView = {
   startedAt: string;
   activeMs: number;
   running: boolean;
+  endedAt: string | null;
+  result: CleaningResult | null;
   etapas: Etapa[];
   progress: { done: number; total: number };
 };
@@ -18,6 +27,7 @@ export type EnvironmentView = {
   slug: string;
   name: string;
   inProgress: { id: string; startedAt: string; done: number; total: number } | null;
+  fastestMs: number | null;
 };
 
 export class ApiError extends Error {

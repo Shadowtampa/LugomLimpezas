@@ -71,13 +71,45 @@ export function Cleaning({ id }: { id: string }) {
       <p className="progresso" aria-label="Progresso">{c.progress.done}/{c.progress.total}</p>
       {error && <p role="alert" className="erro">{error}</p>}
 
+      {c.result && (
+        <section className="card resultado" aria-label="Resultado">
+          <h2>Limpeza concluída</h2>
+          <p className="tempo-total">{formatDuration(c.result.totalMs)}</p>
+          {c.result.newRecord ? (
+            <p className="novo-recorde">Novo recorde!</p>
+          ) : (
+            <p>
+              <span className={`delta ${deltaClass(c.result.diffMs!)}`}>{formatDelta(c.result.diffMs!)}</span>
+              {" "}em relação à mais rápida ({formatDuration(c.result.fastestOtherMs!)})
+            </p>
+          )}
+          {c.result.brokenRecords.length > 0 && (
+            <>
+              <h3>Recordes batidos</h3>
+              <ul className="recordes-batidos">
+                {c.result.brokenRecords.map((r) => (
+                  <li key={r.text}>
+                    {r.text} <span className="delta melhor">{formatDelta(r.lapMs - r.recordMs)}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <a className="botao primario" href={`#/a/${c.environment}`}>Voltar ao ambiente</a>
+          <p className="dica">Desmarcar uma atividade na lista abaixo reabre a limpeza, pausada.</p>
+        </section>
+      )}
+
+      {!c.result && (
       <section className="card etapa" aria-label="Etapa atual">
         <h2>{etapa.titulo}</h2>
         <p>{etapa.objetivo}</p>
         {etapa.aviso && <p className="aviso"><strong>Aviso:</strong> {etapa.aviso}</p>}
       </section>
 
-      {current && (
+      )}
+
+      {current && !c.result && (
         <section className="card atual" aria-label="Atividade atual">
           <h2>Agora</h2>
           <p className="atividade-atual">{current}</p>

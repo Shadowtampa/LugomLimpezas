@@ -29,3 +29,11 @@ a { color: var(--accent); }
 .delta.melhor { color: var(--ok); }
 .delta.pior { color: var(--bad); }
 .delta.igual { color: var(--muted); }
+.mais-rapida { color: var(--muted); margin: 0 0 1rem; }
+.mais-rapida strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.resultado h2 { margin-top: 0; }
+.tempo-total { font-size: 3.5rem; font-weight: 800; margin: 0; font-variant-numeric: tabular-nums; }
+.novo-recorde { color: var(--ok); font-size: 1.4rem; font-weight: 800; margin: .25rem 0 1rem; }
+.recordes-batidos { padding-left: 1.2rem; }
+.recordes-batidos li { margin: .35rem 0; }
+.dica { color: var(--muted); font-size: .9rem; }
