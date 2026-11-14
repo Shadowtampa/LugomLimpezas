@@ -1,13 +1,43 @@
 import { useEffect, useState } from 'react';
-import { api, type EnvironmentItem } from './api.ts';
+import { api, ApiError, type EnvironmentItem } from './api.ts';
+
+type Pending = { filename: string; toon: string; name: string };
 
 export function Home() {
   const [envs, setEnvs] = useState<EnvironmentItem[] | null>(null);
   const [error, setError] = useState('');
+  const [importError, setImportError] = useState('');
+  const [pending, setPending] = useState<Pending | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    api<EnvironmentItem[]>('/environments').then(setEnvs, (e: Error) => setError(e.message));
-  }, []);
+  const load = () => api<EnvironmentItem[]>('/environments').then(setEnvs, (e: Error) => setError(e.message));
+  useEffect(() => { load(); }, []);
+
+  async function send(filename: string, toon: string, replace: boolean) {
+    if (busy) return;
+    setBusy(true);
+    setImportError('');
+    try {
+      await api('/environments/import', { method: 'POST', body: { filename, toon, replace } });
+      setPending(null);
+      await load();
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        setPending({ filename, toon, name: (e.body as { name: string }).name });
+      } else {
+        const line = e instanceof ApiError ? (e.body as { problem?: { line?: number } })?.problem?.line : undefined;
+        setImportError(`${line ? `Linha ${line}: ` : ''}${(e as Error).message}`);
+        setPending(null);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function pick(file: File | undefined) {
+    if (!file) return;
+    send(file.name, await file.text(), false);
+  }
 
   return (
     <>
@@ -15,7 +45,7 @@ export function Home() {
       <h2 id="ambientes">Ambientes</h2>
       {error && <p role="alert" className="erro">{error}</p>}
       {!envs && !error && <p aria-busy="true">Carregando…</p>}
-      {envs && envs.length === 0 && <p>Nenhum ambiente. Coloque um arquivo .toon na pasta de POPs.</p>}
+      {envs && envs.length === 0 && <p>Nenhum ambiente. Importe um arquivo .toon ou coloque-o na pasta de POPs.</p>}
       {envs && (
         <ul className="lista" aria-labelledby="ambientes">
           {envs.map((e) => (
@@ -35,6 +65,30 @@ export function Home() {
           ))}
         </ul>
       )}
+
+      {pending ? (
+        <div className="card confirmacao" role="alertdialog" aria-labelledby="substitui-txt">
+          <p id="substitui-txt">Substituir o POP de {pending.name}?</p>
+          <div className="acoes">
+            <button className="botao primario" onClick={() => send(pending.filename, pending.toon, true)} disabled={busy} autoFocus>Substituir</button>
+            <button className="botao" onClick={() => setPending(null)} disabled={busy}>Cancelar</button>
+          </div>
+        </div>
+      ) : (
+        <div className="acoes">
+          <label className={`botao${busy ? ' desabilitado' : ''}`}>
+            Importar .toon
+            <input
+              type="file"
+              accept=".toon"
+              className="so-leitor-de-tela"
+              disabled={busy}
+              onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ''; }}
+            />
+          </label>
+        </div>
+      )}
+      {importError && <p role="alert" className="erro">{importError}</p>}
     </>
   );
 }

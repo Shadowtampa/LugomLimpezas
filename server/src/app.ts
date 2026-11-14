@@ -5,12 +5,14 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { cleaningView, environmentView, pauseCleaning, resumeCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
 import { HttpError } from './http.ts';
-import { listEnvironments, PopError, readPopText, writePopText } from './pops.ts';
+import { listEnvironments, parsePop, PopError, readPopText, writePopText } from './pops.ts';
 
 export type Config = Deps & { clientDir?: string };
 
 const StartBody = z.object({ abandonCurrent: z.boolean().optional() });
 const PopBody = z.object({ toon: z.string() });
+const ImportBody = z.object({ filename: z.string(), toon: z.string(), replace: z.boolean().optional() });
+const IMPORT_NAME = /^([a-z0-9-]+).toon$/;
 const TaskBody = z.object({ task: z.string().min(1), done: z.boolean() });
 
 export function createApp(cfg: Config) {
@@ -49,6 +51,28 @@ export function createApp(cfg: Config) {
       throw e;
     }
     res.json({ ok: true });
+  });
+
+  app.post('/api/environments/import', (req, res) => {
+    const body = ImportBody.safeParse(req.body);
+    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { filename, toon, replace? }');
+    const m = IMPORT_NAME.exec(body.data.filename);
+    if (!m) throw new HttpError(400, 'nome de arquivo inválido: use só letras minúsculas, números e hífen, com a extensão .toon (ex.: quarto.toon)');
+    const slug = m[1];
+    let pop;
+    try { pop = parsePop(body.data.toon, body.data.filename); }
+    catch (e) {
+      if (e instanceof PopError) throw new HttpError(400, e.message, { problem: e.problem });
+      throw e;
+    }
+    const existing = readPopText(cfg.popsDir, slug);
+    if (existing !== null && !body.data.replace) {
+      let name = slug;
+      try { name = parsePop(existing, `${slug}.toon`).ambiente; } catch { /* arquivo atual inválido: mostra o slug */ }
+      throw new HttpError(409, `já existe o ambiente "${name}"`, { slug, name });
+    }
+    writePopText(cfg.popsDir, slug, body.data.toon);
+    res.status(existing === null ? 201 : 200).json({ slug, name: pop.ambiente, replaced: existing !== null });
   });
 
   app.use('/api', (_req, res) => { res.status(404).json({ error: 'rota não encontrada' }); });
