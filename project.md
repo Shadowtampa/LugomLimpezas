@@ -20,7 +20,8 @@ Vocabulário: ver [CONTEXT.md](CONTEXT.md).
 - **POPs:** arquivos TOON lidos com `@toon-format/toon`.
 - **Testes:** Vitest (+ supertest na API).
 - **Repositório:** `client/` e `server/` na raiz, com npm workspaces.
-- **Deploy:** um container Docker; o Express serve a API e o build do React.
+- **Deploy:** serviço systemd no servidor do home lab; o Express serve a API e
+  o build do React (seção 11).
 
 O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
 
@@ -47,7 +48,7 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
 
 ### R1. Ambientes e POPs
 
-- Cada arquivo `pops/<slug>.toon` é um ambiente. O nome do arquivo é o
+- Cada arquivo `<slug>.toon` na pasta de POPs (`POPS_DIR`, seção 11) é um ambiente. O nome do arquivo é o
   endereço (`/escritorio`) e o campo `ambiente` é o nome exibido.
 - Criar um arquivo, à mão ou importando pela interface (R9), cria um
   ambiente.
@@ -128,7 +129,7 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
 
 ### R9. Importar, editar e exportar POPs
 
-- O arquivo em `pops/` é a única fonte do POP. Não há cópia no banco nem
+- O arquivo na pasta de POPs é a única fonte do POP. Não há cópia no banco nem
   histórico de versões; quem quiser backup exporta antes de editar.
 - **Editar:** uma caixa de texto com o conteúdo TOON do arquivo e o botão
   **Salvar**. Antes de gravar, o sistema decodifica e valida o texto (R1). Se
@@ -371,26 +372,50 @@ confirmação.
   rede consegue editar e substituir POPs.
 - Variáveis de ambiente: `PORT`, `DATABASE_PATH`, `POPS_DIR`. Há um
   `.env.example` com as três.
-- Não versionar o banco, segredos nem arquivos `.env`.
+- Não versionar o banco, a pasta `data/`, segredos nem arquivos `.env`.
 
-## 11. Estrutura
+## 11. Estrutura e deploy
 
 ```text
-pop-escritório/
+lugom-limpezas/
 ├── client/                 # React + Vite
 ├── server/
 │   ├── src/
 │   └── migrations/
-├── pops/
+├── pops/                   # POPs iniciais (semente), versionados
 │   ├── escritorio.toon
 │   └── banheiro-escritorio.toon
-├── Dockerfile
-├── docker-compose.yml      # volume do SQLite, pops/ montada com escrita, porta configurável
+├── data/                   # ignorada pelo git: banco e POPs em uso
+├── deploy/
+│   ├── lugom-limpezas.service
+│   ├── install.sh          # roda uma vez, com sudo
+│   └── deploy.sh           # roda a cada atualização, sem sudo
 ├── .env.example
 ├── CONTEXT.md
 ├── README.md
 └── project.md
 ```
+
+**Servidor:** a máquina do home lab, com Ubuntu 24.04. O clone fica em
+`~/dev/homelab/lugom/limpezas/`, e o link entra no dashboard (Homarr).
+
+- **Node:** o servidor tem o Node 18 do sistema, que não pode ser alterado e
+  não tem `node:sqlite`. O deploy baixa o binário oficial do Node 24 para
+  dentro da pasta do app (ignorado pelo git), e o serviço usa esse binário.
+- **Dados:** `POPS_DIR=data/pops` e `DATABASE_PATH=data/lugom.db`. Na
+  inicialização, se `data/pops/` estiver vazia, o servidor copia os POPs de
+  `pops/` para lá. Um `git pull` nunca toca em `data/`.
+- **Serviço:** `lugom-limpezas.service` (unidade do sistema) roda como o
+  usuário dono do clone, com `Restart=always`, sobe com a máquina e escuta na
+  porta `10060`, em todas as interfaces.
+- **`install.sh` (uma vez, com sudo):** instala a unidade systemd, habilita o
+  serviço e cria uma regra em `sudoers.d` que permite ao usuário rodar só
+  `systemctl restart lugom-limpezas` e `systemctl status lugom-limpezas` sem
+  senha.
+- **`deploy.sh` (sem sudo):** roda `git pull`, garante o Node 24, instala as
+  dependências, gera o build, reinicia o serviço e confere que
+  `GET /api/environments` responde. Se a verificação falhar, o script
+  termina com erro e mostra o log do serviço.
 
 ## 12. Testes
 
@@ -415,7 +440,7 @@ No frontend: o cálculo da atividade atual e da próxima.
 
 ## 13. Critérios de aceite
 
-- [ ] A tela inicial lista os ambientes a partir da pasta `pops/`.
+- [ ] A tela inicial lista os ambientes a partir da pasta de POPs.
 - [ ] Editar um arquivo TOON aparece ao recarregar, sem reiniciar o serviço.
 - [ ] Um arquivo TOON inválido mostra o erro só naquele ambiente.
 - [ ] Iniciar limpeza é um clique e o cronômetro começa.
@@ -433,10 +458,12 @@ No frontend: o cálculo da atividade atual e da próxima.
 - [ ] Um POP inválido não é gravado e o erro aparece na tela.
 - [ ] É possível importar um `.toon`, com confirmação antes de substituir.
 - [ ] **Baixar .toon** entrega o arquivo com as edições feitas.
-- [ ] `docker compose up` sobe o serviço, com o banco persistente e `pops/`
-  montada.
-- [ ] O README explica como rodar localmente e no Docker e como editar os
-  POPs.
+- [ ] O serviço systemd sobe com a máquina, reinicia sozinho se cair e
+  responde na porta `10060`.
+- [ ] `deploy.sh` atualiza o app sem tocar em `data/` e termina com erro se o
+  serviço não responder.
+- [ ] O README explica como rodar localmente, como instalar e atualizar no
+  servidor e como editar os POPs.
 
 ## 14. Fora do escopo
 
