@@ -7,11 +7,17 @@ import { z } from 'zod';
 export const MAX_POP_BYTES = 100 * 1024;
 export const SLUG_RE = /^[a-z0-9-]+$/;
 
+// Atividade: texto simples ou { texto, descricao? }. O texto é a identidade; a descrição é só exibição.
+const Atividade = z.union([
+  z.string().min(1).transform((texto) => ({ texto, descricao: undefined as string | undefined })),
+  z.object({ texto: z.string().min(1), descricao: z.string().min(1).optional() }),
+]);
+
 const Etapa = z.object({
   titulo: z.string().min(1),
   objetivo: z.string().min(1),
   aviso: z.string().optional(),
-  atividades: z.array(z.string().min(1)).min(1),
+  atividades: z.array(Atividade).min(1),
 });
 
 const PopSchema = z.object({
@@ -20,8 +26,8 @@ const PopSchema = z.object({
 }).superRefine((pop, ctx) => {
   const seen = new Set<string>();
   for (const e of pop.etapas) for (const a of e.atividades) {
-    if (seen.has(a)) ctx.addIssue({ code: 'custom', message: `atividade repetida: "${a}"` });
-    seen.add(a);
+    if (seen.has(a.texto)) ctx.addIssue({ code: 'custom', message: `atividade repetida: "${a.texto}"` });
+    seen.add(a.texto);
   }
 });
 

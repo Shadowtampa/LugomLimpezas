@@ -160,7 +160,8 @@ etapas[2]:
     objetivo: liberar as superfícies e preparar o ambiente para a limpeza.
     atividades[2]:
       - Retirar copos, garrafas, pratos e utensílios de alimentação.
-      - Recolher papéis, documentos e objetos espalhados.
+      - texto: Recolher papéis, documentos e objetos espalhados.
+        descricao: Junte tudo numa pilha para triar depois.
   - titulo: Limpeza do piso e finalização
     objetivo: concluir a higienização.
     aviso: A limpeza do piso deve ser feita após as demais atividades.
@@ -171,8 +172,12 @@ etapas[2]:
 - `ambiente` (obrigatório): nome exibido.
 - `etapas` (obrigatório, pelo menos uma): cada uma com `titulo`, `objetivo`,
   `atividades` (pelo menos uma) e `aviso` (opcional).
+- Cada atividade é um texto simples ou um objeto `texto` + `descricao`
+  (opcional), e os dois formatos podem se misturar na mesma lista. A
+  descrição é curta e só serve para exibição.
 - Dentro de um mesmo arquivo, o texto de uma atividade não pode se repetir,
-  porque é ele que identifica a atividade.
+  porque é ele que identifica a atividade. Mudar só a descrição não cria uma
+  atividade nova nem zera o recorde.
 
 ## 6. Conteúdo inicial dos POPs
 

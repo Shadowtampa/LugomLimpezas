@@ -42,7 +42,7 @@ describe('GET /api/environments', () => {
 describe('parsePop', () => {
   const base = (atv: string) => `ambiente: A\netapas[1]:\n  - titulo: T\n    objetivo: o\n    atividades[9]:\n${atv}`;
   it('ignora contadores [N] errados', () => {
-    expect(parsePop(base('      - a\n      - b\n'), 'a.toon').etapas[0].atividades).toEqual(['a', 'b']);
+    expect(parsePop(base('      - a\n      - b\n'), 'a.toon').etapas[0].atividades.map((x) => x.texto)).toEqual(['a', 'b']);
   });
   it('recusa atividade repetida', () => {
     expect(() => parsePop(base('      - a\n      - a\n'), 'a.toon')).toThrow(/repetida/);

@@ -35,7 +35,7 @@ export function loadPop(d: Deps, slug: string): Pop {
   }
 }
 
-const allTasks = (pop: Pop) => pop.etapas.flatMap((e) => e.atividades);
+const allTasks = (pop: Pop) => pop.etapas.flatMap((e) => e.atividades.map((a) => a.texto));
 
 function getRow(d: Deps, id: string): CleaningRow {
   const row = d.db
@@ -125,11 +125,11 @@ export function cleaningView(d: Deps, id: string) {
     titulo: e.titulo,
     objetivo: e.objetivo,
     aviso: e.aviso,
-    atividades: e.atividades.map((text) => {
+    atividades: e.atividades.map(({ texto: text, descricao }) => {
       const lapMs = laps.get(text);
       const recordMs = records.get(text);
       const deltaMs = lapMs !== undefined && recordMs !== undefined ? lapMs - recordMs : undefined;
-      return { text, done: laps.has(text), lapMs, recordMs, deltaMs };
+      return { text, descricao, done: laps.has(text), lapMs, recordMs, deltaMs };
     }),
   }));
   const tasks = allTasks(pop);

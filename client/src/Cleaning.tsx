@@ -113,6 +113,7 @@ export function Cleaning({ id }: { id: string }) {
         <section className="card atual" aria-label="Atividade atual">
           <h2>Agora</h2>
           <p className="atividade-atual">{current}</p>
+          {currentAct?.descricao && <p className="descricao-atual">{currentAct.descricao}</p>}
           <p className="recorde">{currentAct?.recordMs !== undefined ? `Recorde: ${formatDuration(currentAct.recordMs)}` : "Sem recorde ainda"}</p>
           <button className="botao primario" onClick={() => mark(current, true)} disabled={busy || locked}>Feito</button>
           {next && <p className="proxima"><span>Próxima:</span> {next}</p>}
@@ -128,7 +129,10 @@ export function Cleaning({ id }: { id: string }) {
                 <li key={a.text}>
                   <label className={a.done ? 'feita' : ''}>
                     <input type="checkbox" checked={a.done} disabled={busy || locked} onChange={() => mark(a.text, !a.done)} />
-                    <span className="texto">{a.text}</span>
+                    <span className="texto">
+                      <span className="t">{a.text}</span>
+                      {a.descricao && <small className="descricao">{a.descricao}</small>}
+                    </span>
                     {a.done && a.lapMs !== undefined && <span className="volta">{formatDuration(a.lapMs)}</span>}
                     {a.done && a.deltaMs !== undefined && <span className={`delta ${deltaClass(a.deltaMs)}`}>{formatDelta(a.deltaMs)}</span>}
                   </label>
