@@ -26,6 +26,7 @@ export function Home() {
                   <p role="alert" className="erro">
                     {e.error.line ? `Linha ${e.error.line}: ` : ''}{e.error.message}
                   </p>
+                  <a href={`#/a/${e.slug}/editar`}>Editar POP</a>
                 </>
               ) : (
                 <a className="card-link" href={`#/a/${e.slug}`}>{e.name}</a>

@@ -32,9 +32,11 @@ export type EnvironmentView = {
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  body: unknown;
+  constructor(status: number, message: string, body?: unknown) {
     super(message);
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -45,6 +47,6 @@ export async function api<T>(path: string, init?: { method?: string; body?: unkn
     body: init?.body === undefined ? undefined : JSON.stringify(init.body),
   });
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new ApiError(r.status, body.error ?? `Erro ${r.status}`);
+  if (!r.ok) throw new ApiError(r.status, body.error ?? `Erro ${r.status}`, body);
   return body as T;
 }
