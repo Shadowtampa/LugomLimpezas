@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { cleaningView, environmentView, setTask, startCleaning, type Deps } from './cleanings.ts';
+import { cleaningView, environmentView, pauseCleaning, resumeCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
 import { HttpError } from './http.ts';
 import { listEnvironments } from './pops.ts';
 
@@ -19,6 +19,8 @@ export function createApp(cfg: Config) {
   app.get('/api/environments/:slug', (req, res) => { res.json(environmentView(cfg, req.params.slug)); });
   app.post('/api/environments/:slug/cleanings', (req, res) => { res.status(201).json(startCleaning(cfg, req.params.slug)); });
   app.get('/api/cleanings/:id', (req, res) => { res.json(cleaningView(cfg, req.params.id)); });
+  app.post('/api/cleanings/:id/pause', (req, res) => { res.json(pauseCleaning(cfg, req.params.id)); });
+  app.post('/api/cleanings/:id/resume', (req, res) => { res.json(resumeCleaning(cfg, req.params.id)); });
   app.put('/api/cleanings/:id/tasks', (req, res) => {
     const body = TaskBody.safeParse(req.body);
     if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { task, done }');

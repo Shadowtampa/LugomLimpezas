@@ -1,7 +1,7 @@
 export type PopProblem = { file: string; line?: number; message: string };
 export type EnvironmentItem = { slug: string; name?: string; error?: PopProblem };
 
-export type Atividade = { text: string; done: boolean };
+export type Atividade = { text: string; done: boolean; lapMs?: number };
 export type Etapa = { titulo: string; objetivo: string; aviso?: string; atividades: Atividade[] };
 export type CleaningView = {
   id: string;
@@ -9,6 +9,8 @@ export type CleaningView = {
   environmentName: string;
   status: 'in_progress' | 'completed' | 'abandoned';
   startedAt: string;
+  activeMs: number;
+  running: boolean;
   etapas: Etapa[];
   progress: { done: number; total: number };
 };

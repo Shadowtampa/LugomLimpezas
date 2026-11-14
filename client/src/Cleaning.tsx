@@ -1,29 +1,49 @@
 import { useEffect, useState } from 'react';
 import { api, type CleaningView } from './api.ts';
+import { formatDuration } from './format.ts';
 import { currentAndNext, currentEtapaIndex } from './progress.ts';
+
+// O servidor manda o tempo ativo; o navegador só soma o que passou desde que recebeu.
+function useNow(running: boolean) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!running) return;
+    const i = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(i);
+  }, [running]);
+  return now;
+}
 
 export function Cleaning({ id }: { id: string }) {
   const [c, setC] = useState<CleaningView | null>(null);
+  const [receivedAt, setReceivedAt] = useState(Date.now());
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const now = useNow(!!c?.running);
+
+  function apply(view: CleaningView) {
+    setReceivedAt(Date.now());
+    setC(view);
+  }
 
   useEffect(() => {
-    api<CleaningView>(`/cleanings/${id}`).then(setC, (e: Error) => setError(e.message));
+    api<CleaningView>(`/cleanings/${id}`).then(apply, (e: Error) => setError(e.message));
   }, [id]);
 
-  // A marcação só aparece depois que a API confirma; o clique duplo é ignorado enquanto espera.
-  async function mark(task: string, done: boolean) {
+  // O estado só muda depois que a API confirma; o clique duplo é ignorado enquanto espera.
+  async function call(path: string, method: string, body?: unknown) {
     if (busy) return;
     setBusy(true);
     setError('');
     try {
-      setC(await api<CleaningView>(`/cleanings/${id}/tasks`, { method: 'PUT', body: { task, done } }));
+      apply(await api<CleaningView>(`/cleanings/${id}${path}`, { method, body }));
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
     }
   }
+  const mark = (task: string, done: boolean) => call('/tasks', 'PUT', { task, done });
 
   if (!c) {
     return error ? <p role="alert" className="erro">{error}</p> : <p aria-busy="true">Carregando…</p>;
@@ -31,11 +51,22 @@ export function Cleaning({ id }: { id: string }) {
   const { current, next } = currentAndNext(c.etapas);
   const etapa = c.etapas[currentEtapaIndex(c.etapas)];
   const locked = c.status === 'abandoned';
+  const elapsed = c.activeMs + (c.running ? now - receivedAt : 0);
 
   return (
     <>
       <p><a href={`#/a/${c.environment}`}>← {c.environmentName}</a></p>
       <h1>{c.environmentName}</h1>
+
+      <div className="cronometro">
+        <span className="tempo" role="timer" aria-label="Tempo ativo">{formatDuration(elapsed)}</span>
+        {c.status === 'in_progress' && (
+          <button className="botao" onClick={() => call(c.running ? '/pause' : '/resume', 'POST')} disabled={busy}>
+            {c.running ? 'Pausar' : 'Continuar'}
+          </button>
+        )}
+        {c.status === 'in_progress' && !c.running && <span className="pausado">Pausado</span>}
+      </div>
       <p className="progresso" aria-label="Progresso">{c.progress.done}/{c.progress.total}</p>
       {error && <p role="alert" className="erro">{error}</p>}
 
@@ -63,7 +94,8 @@ export function Cleaning({ id }: { id: string }) {
                 <li key={a.text}>
                   <label className={a.done ? 'feita' : ''}>
                     <input type="checkbox" checked={a.done} disabled={busy || locked} onChange={() => mark(a.text, !a.done)} />
-                    <span>{a.text}</span>
+                    <span className="texto">{a.text}</span>
+                    {a.done && a.lapMs !== undefined && <span className="volta">{formatDuration(a.lapMs)}</span>}
                   </label>
                 </li>
               ))}
