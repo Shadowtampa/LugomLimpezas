@@ -1,0 +1,46 @@
+ambiente: Escritório
+etapas[4]:
+  - titulo: Desocupação e preparação do ambiente
+    objetivo: liberar as superfícies e preparar o ambiente para a limpeza.
+    atividades[8]:
+      - Retirar copos, garrafas, pratos e utensílios de alimentação.
+      - Recolher papéis, documentos e objetos espalhados.
+      - Separar os materiais que são lixo e descartá-los corretamente.
+      - Retirar objetos desnecessários das mesas e bancadas.
+      - Guardar materiais de escritório em seus respectivos lugares.
+      - Recolher roupas deixadas no escritório, colocando-as no cesto de roupas sujas ou guardando-as adequadamente.
+      - Esvaziar as lixeiras do escritório e do banheiro.
+      - Retirar objetos do chão que dificultem a limpeza.
+  - titulo: Limpeza dos equipamentos eletrônicos
+    objetivo: remover poeira e sujeira dos equipamentos sem danificá-los.
+    atividades[7]:
+      - Desligar monitores e equipamentos antes da limpeza.
+      - Limpar as telas com pano de microfibra apropriado.
+      - Limpar teclado, mouse e mousepad.
+      - Remover poeira dos suportes articulados dos monitores.
+      - Limpar notebooks e demais equipamentos.
+      - Limpar cabos e periféricos externamente.
+      - Verificar e organizar os fios e conexões.
+  - titulo: Limpeza dos móveis e superfícies
+    objetivo: higienizar todas as superfícies e estruturas do escritório.
+    atividades[6]:
+      - Limpar mesas e bancadas.
+      - Limpar prateleiras, armários e gaveteiros externamente.
+      - Limpar cadeiras, braços e encostos.
+      - Limpar pés das mesas e estruturas de apoio.
+      - Remover poeira de objetos decorativos.
+      - Limpar maçanetas, interruptores e pontos de contato frequente.
+  - titulo: Limpeza do piso e finalização
+    objetivo: concluir a higienização e devolver o ambiente em condições adequadas de utilização.
+    aviso: Utilizar produtos adequados para cada superfície e manter os materiais de limpeza do banheiro separados dos utilizados no escritório. A limpeza do piso deve ser realizada após as demais atividades, evitando retrabalho.
+    atividades[10]:
+      - Varrer ou aspirar todo o piso do escritório.
+      - Limpar os rodapés.
+      - Limpar a área abaixo das mesas e móveis.
+      - Passar pano úmido com produto adequado ao revestimento.
+      - Verificar se não existem manchas ou resíduos no chão.
+      - Recolocar cadeiras e objetos em seus lugares.
+      - Conferir se todas as lixeiras estão limpas e com sacos novos.
+      - Verificar a organização geral do ambiente.
+      - Conferir se o banheiro está abastecido e pronto para uso.
+      - Desligar as luzes e equipamentos que não precisam permanecer ligados.

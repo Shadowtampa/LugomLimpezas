@@ -1,0 +1,19 @@
+ambiente: Banheiro do escritório
+etapas[1]:
+  - titulo: Limpeza e higienização do banheiro
+    objetivo: garantir condições adequadas de higiene, conservação e utilização do banheiro.
+    aviso: Utilizar panos e utensílios exclusivos para o banheiro. Nunca misturar água sanitária com ácidos, amônia ou outros produtos de limpeza.
+    atividades[13]:
+      - Retirar lixo da lixeira e substituir o saco.
+      - Recolher objetos e materiais espalhados.
+      - Aplicar produto de limpeza adequado no vaso sanitário e higienizar internamente.
+      - Limpar a parte externa do vaso sanitário, incluindo tampa, assento e base.
+      - Higienizar a pia e a torneira.
+      - Limpar o espelho.
+      - Limpar bancada e demais superfícies.
+      - Limpar paredes e revestimentos quando necessário.
+      - Lavar ou limpar o piso com produto apropriado.
+      - Limpar maçanetas e pontos de contato.
+      - Repor papel higiênico, sabonete líquido e papel-toalha, quando aplicável.
+      - Verificar se há odores, vazamentos ou problemas aparentes.
+      - Deixar o banheiro ventilado e em condições de uso.
