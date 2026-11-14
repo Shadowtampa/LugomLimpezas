@@ -1,39 +1,17 @@
-import { useEffect, useState } from 'react';
-import { api, type EnvironmentItem } from './api.ts';
+import { Cleaning } from './Cleaning.tsx';
+import { Environment } from './Environment.tsx';
+import { Home } from './Home.tsx';
+import { useHash } from './useHash.ts';
 
 export function App() {
-  const [envs, setEnvs] = useState<EnvironmentItem[] | null>(null);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    api<EnvironmentItem[]>('/environments').then(setEnvs, (e: Error) => setError(e.message));
-  }, []);
-
+  const hash = useHash();
+  const env = /^#\/a\/([a-z0-9-]+)$/.exec(hash);
+  const cleaning = /^#\/l\/([\w-]+)$/.exec(hash);
   return (
     <main>
-      <h1>Lugom Limpezas</h1>
-      <h2 id="ambientes">Ambientes</h2>
-      {error && <p role="alert" className="erro">{error}</p>}
-      {!envs && !error && <p aria-busy="true">Carregando…</p>}
-      {envs && envs.length === 0 && <p>Nenhum ambiente. Coloque um arquivo .toon na pasta de POPs.</p>}
-      {envs && (
-        <ul className="ambientes" aria-labelledby="ambientes">
-          {envs.map((e) => (
-            <li key={e.slug} className={e.error ? 'card invalido' : 'card'}>
-              {e.error ? (
-                <>
-                  <strong>{e.slug}.toon</strong>
-                  <p role="alert" className="erro">
-                    {e.error.line ? `Linha ${e.error.line}: ` : ''}{e.error.message}
-                  </p>
-                </>
-              ) : (
-                <strong>{e.name}</strong>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      {env ? <Environment key={env[1]} slug={env[1]} />
+        : cleaning ? <Cleaning key={cleaning[1]} id={cleaning[1]} />
+        : <Home />}
     </main>
   );
 }

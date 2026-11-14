@@ -1,0 +1,20 @@
+a { color: var(--accent); }
+.lista { list-style: none; padding: 0; display: grid; gap: .75rem; }
+.card-link { display: block; margin: -1rem -1.25rem; padding: 1rem 1.25rem; color: var(--text); text-decoration: none; font-weight: 600; }
+.card-link:hover { color: var(--accent); }
+.card { margin-bottom: .75rem; }
+.botao { display: inline-block; font: inherit; font-weight: 700; padding: .85rem 1.5rem; border-radius: .6rem; border: 2px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; text-decoration: none; min-height: 3rem; }
+.botao.primario { background: var(--accent); border-color: var(--accent); color: #1a1500; }
+.botao:disabled { opacity: .55; cursor: wait; }
+.acoes { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1rem 0; }
+.progresso { font-size: 1.4rem; font-weight: 700; margin: 0 0 1rem; }
+.etapa h2, .atual h2 { margin-top: 0; }
+.aviso { color: var(--accent); }
+.atividade-atual { font-size: 1.4rem; font-weight: 700; margin: 0 0 1rem; }
+.proxima { color: var(--muted); margin: 1rem 0 0; }
+.proxima span { text-transform: uppercase; font-size: .8rem; letter-spacing: .08em; }
+.grupo h3 { margin: 1.5rem 0 .5rem; font-size: 1rem; color: var(--muted); }
+.atividades { list-style: none; padding: 0; margin: 0; }
+.atividades label { display: flex; gap: .75rem; align-items: flex-start; padding: .6rem .25rem; border-bottom: 1px solid var(--border); cursor: pointer; }
+.atividades input { width: 1.4rem; height: 1.4rem; flex: none; margin-top: .1rem; accent-color: var(--ok); }
+.atividades .feita span { color: var(--muted); text-decoration: line-through; }
