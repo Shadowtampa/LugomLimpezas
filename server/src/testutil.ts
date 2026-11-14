@@ -6,10 +6,11 @@ import { openDb } from './db.ts';
 
 const seeds = resolve(import.meta.dirname, '../../pops');
 
-// App com SQLite em memória e uma pasta de POPs temporária com os POPs iniciais.
+// App com SQLite em memória, pasta de POPs temporária com os POPs iniciais e relógio controlável.
 export function makeApp() {
   const popsDir = mkdtempSync(join(tmpdir(), 'pops-'));
   for (const f of ['escritorio.toon', 'banheiro-escritorio.toon']) copyFileSync(join(seeds, f), join(popsDir, f));
   const db = openDb(':memory:');
-  return { app: createApp({ popsDir, db }), db, popsDir };
+  const clock = { t: Date.parse('2026-01-01T12:00:00Z') };
+  return { app: createApp({ popsDir, db, now: () => clock.t }), db, popsDir, clock };
 }
