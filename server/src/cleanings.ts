@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
+import { transaction } from './db.ts';
 import { HttpError } from './http.ts';
 import { PopError, readPop, SLUG_RE, type Pop } from './pops.ts';
 
@@ -13,6 +14,8 @@ type CleaningRow = {
   started_at: string;
   active_ms: number;
   running_since: string | null;
+  ended_at: string | null;
+  total_ms: number | null;
 };
 
 const nowMs = (d: Deps) => (d.now ? d.now() : Date.now());
@@ -36,7 +39,7 @@ const allTasks = (pop: Pop) => pop.etapas.flatMap((e) => e.atividades);
 
 function getRow(d: Deps, id: string): CleaningRow {
   const row = d.db
-    .prepare('SELECT id, environment, status, started_at, active_ms, running_since FROM cleanings WHERE id = ?')
+    .prepare('SELECT id, environment, status, started_at, active_ms, running_since, ended_at, total_ms FROM cleanings WHERE id = ?')
     .get(id) as CleaningRow | undefined;
   if (!row) throw new HttpError(404, 'limpeza não encontrada');
   return row;
@@ -54,7 +57,15 @@ export function environmentView(d: Deps, slug: string) {
     const view = cleaningView(d, cur.id);
     current = { id: cur.id, startedAt: view.startedAt, done: view.progress.done, total: view.progress.total };
   }
-  return { slug, name: pop.ambiente, inProgress: current };
+  return { slug, name: pop.ambiente, inProgress: current, fastestMs: fastestMs(d, slug) };
+}
+
+// Limpeza mais rápida: menor tempo total entre as concluídas, opcionalmente sem contar uma delas.
+function fastestMs(d: Deps, slug: string, exceptId = ''): number | null {
+  const r = d.db
+    .prepare("SELECT MIN(total_ms) AS m FROM cleanings WHERE environment = ? AND status = 'completed' AND id != ?")
+    .get(slug, exceptId) as { m: number | null };
+  return r.m;
 }
 
 export function startCleaning(d: Deps, slug: string) {
@@ -94,6 +105,19 @@ export function cleaningView(d: Deps, id: string) {
     }),
   }));
   const tasks = allTasks(pop);
+  let result = null;
+  if (row.status === 'completed' && row.total_ms !== null) {
+    const fastestOther = fastestMs(d, row.environment, id);
+    result = {
+      totalMs: row.total_ms,
+      fastestOtherMs: fastestOther,
+      diffMs: fastestOther === null ? null : row.total_ms - fastestOther,
+      newRecord: fastestOther === null || row.total_ms < fastestOther,
+      brokenRecords: etapas.flatMap((e) => e.atividades)
+        .filter((a) => a.deltaMs !== undefined && a.deltaMs < 0)
+        .map((a) => ({ text: a.text, lapMs: a.lapMs!, recordMs: a.recordMs! })),
+    };
+  }
   return {
     id: row.id,
     environment: row.environment,
@@ -102,6 +126,8 @@ export function cleaningView(d: Deps, id: string) {
     startedAt: row.started_at,
     activeMs: activeMs(row, nowMs(d)),
     running: row.running_since !== null,
+    endedAt: row.ended_at,
+    result,
     etapas,
     progress: { done: tasks.filter((t) => laps.has(t)).length, total: tasks.length },
   };
@@ -134,18 +160,29 @@ export function setTask(d: Deps, id: string, task: string, done: boolean) {
   const pop = loadPop(d, row.environment);
   if (!allTasks(pop).includes(task)) throw new HttpError(400, 'atividade não existe no POP atual');
   if (row.status === 'abandoned') throw new HttpError(409, 'limpeza abandonada não aceita marcações');
-  if (done) {
-    const already = d.db.prepare('SELECT 1 FROM cleaning_tasks WHERE cleaning_id = ? AND task = ?').get(id, task);
-    if (!already) {
+  transaction(d.db, () => {
+    if (done) {
+      const already = d.db.prepare('SELECT 1 FROM cleaning_tasks WHERE cleaning_id = ? AND task = ?').get(id, task);
+      if (already) return;
       const now = nowMs(d);
       const marked = activeMs(row, now);
       // R5: a volta conta desde a marcação mais recente ainda marcada (ou desde o início).
       const last = (d.db.prepare('SELECT MAX(marked_ms) AS m FROM cleaning_tasks WHERE cleaning_id = ?').get(id) as { m: number | null }).m ?? 0;
       d.db.prepare('INSERT INTO cleaning_tasks (cleaning_id, task, marked_ms, lap_ms, marked_at) VALUES (?, ?, ?, ?, ?)')
         .run(id, task, marked, marked - last, iso(now));
+      // R7: marcar a última atividade conclui a limpeza; o tempo total é o tempo ativo desta marcação.
+      const markedTasks = new Set((d.db.prepare('SELECT task FROM cleaning_tasks WHERE cleaning_id = ?').all(id) as { task: string }[]).map((r) => r.task));
+      if (row.status === 'in_progress' && allTasks(pop).every((t) => markedTasks.has(t))) {
+        d.db.prepare("UPDATE cleanings SET status = 'completed', ended_at = ?, total_ms = ?, active_ms = ?, running_since = NULL WHERE id = ?")
+          .run(iso(now), marked, marked, id);
+      }
+    } else {
+      const removed = d.db.prepare('DELETE FROM cleaning_tasks WHERE cleaning_id = ? AND task = ?').run(id, task).changes;
+      // Desmarcar numa concluída a devolve para em andamento, pausada.
+      if (removed && row.status === 'completed') {
+        d.db.prepare("UPDATE cleanings SET status = 'in_progress', ended_at = NULL, total_ms = NULL, running_since = NULL WHERE id = ?").run(id);
+      }
     }
-  } else {
-    d.db.prepare('DELETE FROM cleaning_tasks WHERE cleaning_id = ? AND task = ?').run(id, task);
-  }
+  });
   return cleaningView(d, id);
 }
