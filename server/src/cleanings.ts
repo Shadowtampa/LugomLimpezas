@@ -57,7 +57,26 @@ export function environmentView(d: Deps, slug: string) {
     const view = cleaningView(d, cur.id);
     current = { id: cur.id, startedAt: view.startedAt, done: view.progress.done, total: view.progress.total };
   }
-  return { slug, name: pop.ambiente, inProgress: current, fastestMs: fastestMs(d, slug) };
+  return { slug, name: pop.ambiente, inProgress: current, fastestMs: fastestMs(d, slug), history: history(d, slug, pop) };
+}
+
+// R8: da mais recente para a mais antiga; progresso calculado contra o POP atual.
+function history(d: Deps, slug: string, pop: Pop) {
+  const inPop = new Set(allTasks(pop));
+  const marked = new Map<string, number>();
+  const rows = d.db.prepare("SELECT cleaning_id, task FROM cleaning_tasks WHERE cleaning_id IN (SELECT id FROM cleanings WHERE environment = ?)").all(slug) as { cleaning_id: string; task: string }[];
+  for (const r of rows) if (inPop.has(r.task)) marked.set(r.cleaning_id, (marked.get(r.cleaning_id) ?? 0) + 1);
+  const cleanings = d.db.prepare("SELECT id, environment, status, started_at, active_ms, running_since, ended_at, total_ms FROM cleanings WHERE environment = ? ORDER BY started_at DESC, rowid DESC").all(slug) as CleaningRow[];
+  const now = nowMs(d);
+  return cleanings.map((c) => ({
+    id: c.id,
+    startedAt: c.started_at,
+    status: c.status,
+    // concluída e abandonada: tempo gravado; em andamento: tempo corrido até agora
+    totalMs: c.total_ms ?? activeMs(c, now),
+    done: marked.get(c.id) ?? 0,
+    total: inPop.size,
+  }));
 }
 
 // Limpeza mais rápida: menor tempo total entre as concluídas, opcionalmente sem contar uma delas.

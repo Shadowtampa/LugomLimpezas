@@ -44,3 +44,16 @@ a { color: var(--accent); }
 .so-leitor-de-tela { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
 label.botao:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
 label.botao.desabilitado { opacity: .55; cursor: wait; }
+.historico { list-style: none; padding: 0; margin: 0 0 1.5rem; }
+.historico li { display: grid; grid-template-columns: 6.5rem 1fr auto auto; gap: .5rem 1rem; align-items: baseline; padding: .6rem .25rem; border-bottom: 1px solid var(--border); }
+.historico .tempo-hist, .historico .prog { font-variant-numeric: tabular-nums; }
+.historico .prog { color: var(--muted); min-width: 3.2rem; text-align: right; }
+.historico .status-completed .status { color: var(--ok); }
+.historico .status-abandoned .status { color: var(--muted); }
+.historico .status-in_progress .status { color: var(--accent); }
+@media (max-width: 30rem) {
+  .historico li { grid-template-columns: 1fr auto; }
+  .historico .status { grid-column: 1; grid-row: 2; }
+  .historico .tempo-hist { grid-column: 2; grid-row: 1; }
+  .historico .prog { grid-column: 2; grid-row: 2; }
+}
