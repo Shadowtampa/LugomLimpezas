@@ -75,11 +75,23 @@ export function cleaningView(d: Deps, id: string) {
     (d.db.prepare('SELECT task, lap_ms FROM cleaning_tasks WHERE cleaning_id = ?').all(id) as { task: string; lap_ms: number }[])
       .map((r) => [r.task, r.lap_ms]),
   );
+  // R6: recorde = menor volta daquele texto neste ambiente em OUTRAS limpezas (qualquer status).
+  const records = new Map(
+    (d.db.prepare(
+      `SELECT ct.task, MIN(ct.lap_ms) AS m FROM cleaning_tasks ct JOIN cleanings c ON c.id = ct.cleaning_id
+       WHERE c.environment = ? AND ct.cleaning_id != ? GROUP BY ct.task`,
+    ).all(row.environment, id) as { task: string; m: number }[]).map((r) => [r.task, r.m]),
+  );
   const etapas = pop.etapas.map((e) => ({
     titulo: e.titulo,
     objetivo: e.objetivo,
     aviso: e.aviso,
-    atividades: e.atividades.map((text) => ({ text, done: laps.has(text), lapMs: laps.get(text) })),
+    atividades: e.atividades.map((text) => {
+      const lapMs = laps.get(text);
+      const recordMs = records.get(text);
+      const deltaMs = lapMs !== undefined && recordMs !== undefined ? lapMs - recordMs : undefined;
+      return { text, done: laps.has(text), lapMs, recordMs, deltaMs };
+    }),
   }));
   const tasks = allTasks(pop);
   return {

@@ -8,3 +8,15 @@ export function formatDuration(ms: number): string {
   const s = total % 60;
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
+
+// Diferença para o recorde: −0:12 (mais rápido) ou +0:08 (mais lento); o sinal sempre aparece.
+export function formatDelta(ms: number): string {
+  const secs = Math.round(Math.abs(ms) / 1000);
+  if (secs === 0) return '±0:00';
+  return (ms < 0 ? '−' : '+') + formatDuration(secs * 1000);
+}
+
+export function deltaClass(ms: number): 'melhor' | 'pior' | 'igual' {
+  const secs = Math.round(Math.abs(ms) / 1000);
+  return secs === 0 ? 'igual' : ms < 0 ? 'melhor' : 'pior';
+}

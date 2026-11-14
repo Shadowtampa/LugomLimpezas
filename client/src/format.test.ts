@@ -9,3 +9,15 @@ it('formata m:ss e h:mm:ss', () => {
   expect(formatDuration(3_725_000)).toBe('1:02:05');
   expect(formatDuration(-5)).toBe('0:00');
 });
+
+import { deltaClass, formatDelta } from './format.ts';
+
+it('formata a diferença com sinal sempre visível', () => {
+  expect(formatDelta(-12_000)).toBe('−0:12');
+  expect(formatDelta(8_000)).toBe('+0:08');
+  expect(formatDelta(-65_000)).toBe('−1:05');
+  expect(formatDelta(200)).toBe('±0:00');
+  expect(deltaClass(-12_000)).toBe('melhor');
+  expect(deltaClass(8_000)).toBe('pior');
+  expect(deltaClass(100)).toBe('igual');
+});

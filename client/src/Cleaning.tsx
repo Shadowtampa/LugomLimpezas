@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type CleaningView } from './api.ts';
-import { formatDuration } from './format.ts';
+import { deltaClass, formatDelta, formatDuration } from './format.ts';
 import { currentAndNext, currentEtapaIndex } from './progress.ts';
 
 // O servidor manda o tempo ativo; o navegador só soma o que passou desde que recebeu.
@@ -49,6 +49,7 @@ export function Cleaning({ id }: { id: string }) {
     return error ? <p role="alert" className="erro">{error}</p> : <p aria-busy="true">Carregando…</p>;
   }
   const { current, next } = currentAndNext(c.etapas);
+  const currentAct = c.etapas.flatMap((e) => e.atividades).find((a) => a.text === current);
   const etapa = c.etapas[currentEtapaIndex(c.etapas)];
   const locked = c.status === 'abandoned';
   const elapsed = c.activeMs + (c.running ? now - receivedAt : 0);
@@ -80,6 +81,7 @@ export function Cleaning({ id }: { id: string }) {
         <section className="card atual" aria-label="Atividade atual">
           <h2>Agora</h2>
           <p className="atividade-atual">{current}</p>
+          <p className="recorde">{currentAct?.recordMs !== undefined ? `Recorde: ${formatDuration(currentAct.recordMs)}` : "Sem recorde ainda"}</p>
           <button className="botao primario" onClick={() => mark(current, true)} disabled={busy || locked}>Feito</button>
           {next && <p className="proxima"><span>Próxima:</span> {next}</p>}
         </section>
@@ -96,6 +98,7 @@ export function Cleaning({ id }: { id: string }) {
                     <input type="checkbox" checked={a.done} disabled={busy || locked} onChange={() => mark(a.text, !a.done)} />
                     <span className="texto">{a.text}</span>
                     {a.done && a.lapMs !== undefined && <span className="volta">{formatDuration(a.lapMs)}</span>}
+                    {a.done && a.deltaMs !== undefined && <span className={`delta ${deltaClass(a.deltaMs)}`}>{formatDelta(a.deltaMs)}</span>}
                   </label>
                 </li>
               ))}
