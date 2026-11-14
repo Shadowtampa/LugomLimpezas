@@ -3,11 +3,12 @@ import type { NextFunction, Request, Response } from 'express';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { cleaningView, environmentView, pauseCleaning, resumeCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
+import { readAgenda, readAgendaText, writeAgendaText } from './agenda.ts';
+import { cleaningView, environmentView, recentCleanings, pauseCleaning, resumeCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
 import { HttpError } from './http.ts';
 import { listEnvironments, parsePop, PopError, readPopText, writePopText } from './pops.ts';
 
-export type Config = Deps & { clientDir?: string };
+export type Config = Deps & { agendaFile: string; clientDir?: string };
 
 const StartBody = z.object({ abandonCurrent: z.boolean().optional() });
 const PopBody = z.object({ toon: z.string() });
@@ -73,6 +74,25 @@ export function createApp(cfg: Config) {
     }
     writePopText(cfg.popsDir, slug, body.data.toon);
     res.status(existing === null ? 201 : 200).json({ slug, name: pop.ambiente, replaced: existing !== null });
+  });
+
+  app.get('/api/dashboard', (_req, res) => {
+    const { agenda, error } = readAgenda(cfg.agendaFile);
+    const names = new Map(listEnvironments(cfg.popsDir).flatMap((e) => (e.name ? [[e.slug, e.name] as const] : [])));
+    res.json({ agenda, agendaError: error ?? null, recent: recentCleanings(cfg, names) });
+  });
+  app.get('/api/agenda.toon', (_req, res) => {
+    res.attachment('agenda.toon').type('text/plain; charset=utf-8').send(readAgendaText(cfg.agendaFile) ?? '');
+  });
+  app.put('/api/agenda', (req, res) => {
+    const body = PopBody.safeParse(req.body);
+    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { toon }');
+    try { writeAgendaText(cfg.agendaFile, body.data.toon); }
+    catch (e) {
+      if (e instanceof PopError) throw new HttpError(400, e.message, { problem: e.problem });
+      throw e;
+    }
+    res.json({ ok: true });
   });
 
   app.use('/api', (_req, res) => { res.status(404).json({ error: 'rota não encontrada' }); });

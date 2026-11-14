@@ -15,7 +15,7 @@ describe('GET /api/environments', () => {
   it('lista os ambientes iniciais', async () => {
     copyFileSync(join(seeds, 'escritorio.toon'), join(dir, 'escritorio.toon'));
     copyFileSync(join(seeds, 'banheiro-escritorio.toon'), join(dir, 'banheiro-escritorio.toon'));
-    const r = await request(createApp({ popsDir: dir, db: openDb(':memory:') })).get('/api/environments');
+    const r = await request(createApp({ popsDir: dir, db: openDb(':memory:'), agendaFile: join(dir, '.agenda.toon') })).get('/api/environments');
     expect(r.body).toEqual([
       { slug: 'banheiro-escritorio', name: 'Banheiro do escritório' },
       { slug: 'escritorio', name: 'Escritório' },
@@ -25,7 +25,7 @@ describe('GET /api/environments', () => {
   it('arquivo inválido só quebra o próprio ambiente e vê edição sem reiniciar', async () => {
     copyFileSync(join(seeds, 'escritorio.toon'), join(dir, 'escritorio.toon'));
     writeFileSync(join(dir, 'ruim.toon'), 'ambiente: Ruim\netapas:\n  - titulo: A\n');
-    const app = createApp({ popsDir: dir, db: openDb(':memory:') });
+    const app = createApp({ popsDir: dir, db: openDb(':memory:'), agendaFile: join(dir, '.agenda.toon') });
     const r = await request(app).get('/api/environments');
     expect(r.body.find((e: any) => e.slug === 'escritorio').name).toBe('Escritório');
     const ruim = r.body.find((e: any) => e.slug === 'ruim');

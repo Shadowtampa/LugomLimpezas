@@ -1,0 +1,24 @@
+ambiente: Quarto
+etapas[3]:
+  - titulo: Arrumação
+    objetivo: deixar o quarto organizado antes de limpar.
+    atividades[5]:
+      - texto: Arrumar a cama.
+        descricao: Esticar o lençol, ajeitar o edredom e os travesseiros.
+      - Recolher roupas do chão e das cadeiras.
+      - Colocar as roupas sujas no cesto e guardar as limpas.
+      - Guardar objetos fora do lugar.
+      - Retirar copos, pratos e lixo do quarto.
+  - titulo: Limpeza das superfícies
+    objetivo: tirar a poeira dos móveis e dos objetos.
+    atividades[3]:
+      - Passar pano nas mesas de cabeceira e na cômoda.
+      - Tirar a poeira de prateleiras e objetos decorativos.
+      - Limpar o espelho, se houver.
+  - titulo: Piso e finalização
+    objetivo: concluir a limpeza e deixar o quarto pronto para uso.
+    atividades[4]:
+      - Varrer ou aspirar o piso, inclusive embaixo da cama.
+      - Passar pano úmido no piso.
+      - Esvaziar a lixeira e trocar o saco.
+      - Abrir a janela para ventilar o quarto.

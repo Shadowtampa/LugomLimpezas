@@ -20,7 +20,7 @@ Na primeira execução, os POPs de `pops/` são copiados para `data/pops/`. O ba
 fica em `data/lugom.db`. A pasta `data/` não é versionada.
 
 Variáveis (`.env`): `PORT` (10061), `DATABASE_PATH` (`data/lugom.db`),
-`POPS_DIR` (`data/pops`).
+`POPS_DIR` (`data/pops`), `AGENDA_FILE` (`data/agenda.toon`).
 
 ## Servidor (systemd)
 
@@ -81,3 +81,23 @@ etapas[2]:
 - Os contadores `[N]` não são exigidos.
 - Os arquivos são lidos a cada requisição: editar e recarregar a página basta.
   Um arquivo inválido só quebra o próprio ambiente.
+
+## Agenda da semana (TOON)
+
+O painel da tela inicial sugere as limpezas do dia a partir de `data/agenda.toon`
+(a versão inicial vem de `agenda.toon` na raiz do repositório). Edite pela
+interface (**Editar agenda**) ou no arquivo; é relido a cada requisição.
+
+```toon
+domingo[0]:
+segunda[1]: quarto
+terca[1]: escritorio
+quarta[1]: quarto
+quinta[1]: escritorio
+sexta[1]: quarto
+sabado[2]: escritorio,banheiro-escritorio
+```
+
+Chaves: `domingo`, `segunda`, `terca`, `quarta`, `quinta`, `sexta`, `sabado` (sem
+acento; chave desconhecida é erro). Os valores são nomes de arquivo de ambiente,
+sem `.toon`.

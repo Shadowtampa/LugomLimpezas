@@ -317,6 +317,9 @@ Prefixo `/api`. Toda entrada é validada com Zod.
 | POST   | `/cleanings/:id/resume`                | Retoma                                                                     |
 | PUT    | `/cleanings/:id/tasks`                 | Corpo `{ "task": "<texto>", "done": true \| false }`; marca ou desmarca     |
 | GET    | `/environments/:slug/pop.toon`         | Exporta o arquivo TOON como download                                       |
+| GET    | `/dashboard`                           | Agenda por dia da semana e as últimas 50 limpezas de todos os ambientes (seção 15) |
+| GET    | `/agenda.toon`                         | Exporta o arquivo da agenda                                                |
+| PUT    | `/agenda`                              | Corpo `{ "toon": "<texto>" }`; valida e grava a agenda. Erro de validação: `400` |
 | PUT    | `/environments/:slug/pop`              | Corpo `{ "toon": "<texto>" }`; valida e grava (R9). Erro de validação: `400` |
 | POST   | `/environments/import`                 | Corpo `{ "filename": "x.toon", "toon": "<texto>", "replace": true }`; cria ou substitui. Ambiente existente sem `replace`: `409` |
 
@@ -375,8 +378,8 @@ confirmação.
 - Mensagens de erro compreensíveis.
 - Sem autenticação: o serviço roda na rede do home lab. Quem estiver na
   rede consegue editar e substituir POPs.
-- Variáveis de ambiente: `PORT`, `DATABASE_PATH`, `POPS_DIR`. Há um
-  `.env.example` com as três.
+- Variáveis de ambiente: `PORT`, `DATABASE_PATH`, `POPS_DIR`, `AGENDA_FILE`. Há um
+  `.env.example` com as quatro.
 - Não versionar o banco, a pasta `data/`, segredos nem arquivos `.env`.
 
 ## 11. Estrutura e deploy
@@ -479,3 +482,47 @@ No frontend: o cálculo da atividade atual e da próxima.
 - Agendamento e notificações.
 - Tela de detalhes de limpezas antigas e relatórios.
 - Fidelidade do histórico a versões antigas do POP.
+
+## 15. Painel e agenda
+
+A tela inicial é um painel:
+
+- **Hoje:** as limpezas sugeridas para o dia da semana, cada uma levando ao
+  ambiente, com o selo *Concluída hoje* ou *Em andamento* quando for o caso.
+  Sem sugestões, mostra *Dia livre*.
+- **Semana:** os sete dias, de domingo a sábado, com o que está planejado em
+  cada um e um ✓ nas limpezas concluídas naquele dia. Hoje fica destacado.
+- **Últimas limpezas:** as 10 mais recentes de todos os ambientes, com dia da
+  semana, data, ambiente, status e tempo.
+
+O dia de hoje vem do navegador, para não depender do fuso do servidor.
+
+### Agenda
+
+Um arquivo TOON (`AGENDA_FILE`, padrão `data/agenda.toon`), relido a cada
+requisição, com um ambiente (nome do arquivo, sem `.toon`) ou mais por dia:
+
+```toon
+domingo[0]:
+segunda[1]: quarto
+terca[1]: escritorio
+quarta[1]: quarto
+quinta[1]: escritorio
+sexta[1]: quarto
+sabado[2]: escritorio,banheiro-escritorio
+```
+
+- As chaves são `domingo`, `segunda`, `terca`, `quarta`, `quinta`, `sexta` e
+  `sabado`, sem acento. Chave desconhecida (por exemplo `terça`) é erro. Dia
+  ausente é um dia sem sugestões.
+- A agenda inicial (arquivo `agenda.toon` na raiz) é: segunda, quarta e sexta o
+  quarto; terça e quinta o escritório; sábado a limpeza geral (escritório e
+  banheiro do escritório); domingo livre. Ela é copiada para `AGENDA_FILE` só se
+  o arquivo ainda não existir.
+- Sem o arquivo, a agenda é vazia. Arquivo inválido mostra o erro no painel
+  (`Agenda inválida: …`), sem derrubar o resto.
+- A agenda é editada pela interface (**Editar agenda**, a mesma caixa de texto
+  dos POPs) com validação e gravação atômica.
+- O ambiente da agenda que não existir mais aparece como *ambiente não
+  encontrado* no painel.
+- O POP inicial `pops/quarto.toon` entra junto, com três etapas simples.
