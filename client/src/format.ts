@@ -20,3 +20,16 @@ export function deltaClass(ms: number): 'melhor' | 'pior' | 'igual' {
   const secs = Math.round(Math.abs(ms) / 1000);
   return secs === 0 ? 'igual' : ms < 0 ? 'melhor' : 'pior';
 }
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+// Datas no fuso do navegador; o armazenamento é em ISO.
+export function formatDayMonth(iso: string): string {
+  const d = new Date(iso);
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
+}
+
+export function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return `${formatDayMonth(iso)}/${d.getFullYear()}`;
+}

@@ -21,3 +21,11 @@ it('formata a diferença com sinal sempre visível', () => {
   expect(deltaClass(8_000)).toBe('pior');
   expect(deltaClass(100)).toBe('igual');
 });
+
+import { formatDate, formatDayMonth } from './format.ts';
+
+it('formata datas como DD/MM e DD/MM/AAAA', () => {
+  const iso = new Date(2026, 10, 5, 12, 0).toISOString(); // 5 de novembro, meio-dia local
+  expect(formatDayMonth(iso)).toBe('05/11');
+  expect(formatDate(iso)).toBe('05/11/2026');
+});
