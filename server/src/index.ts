@@ -6,7 +6,7 @@ const root = resolve(import.meta.dirname, '../..');
 try { process.loadEnvFile(resolve(root, '.env')); } catch { /* .env é opcional */ }
 
 const popsDir = resolve(root, process.env.POPS_DIR ?? 'data/pops');
-const port = Number(process.env.PORT ?? 10060);
+const port = Number(process.env.PORT ?? 10061);
 
 // Primeira inicialização: copia os POPs iniciais para a pasta em uso.
 mkdirSync(popsDir, { recursive: true });

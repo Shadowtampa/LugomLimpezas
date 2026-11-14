@@ -33,7 +33,7 @@ npm run build
 sudo -n systemctl restart "$UNIT"
 
 PORT="$(grep -E '^PORT=' .env 2>/dev/null | cut -d= -f2 || true)"
-URL="http://127.0.0.1:${PORT:-10060}/api/environments"
+URL="http://127.0.0.1:${PORT:-10061}/api/environments"
 for _ in $(seq 1 20); do
   if curl -fsS "$URL" >/dev/null 2>&1; then echo "OK: $URL respondeu."; exit 0; fi
   sleep 1

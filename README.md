@@ -11,7 +11,7 @@ Precisa de Node 24 ou mais novo (o app usa `node:sqlite` e roda TypeScript diret
 ```bash
 npm install
 cp .env.example .env     # opcional; os valores padrão já funcionam
-npm run dev              # servidor em :10060 e Vite em :5173 (com proxy para /api)
+npm run dev              # servidor em :10061 e Vite em :5173 (com proxy para /api)
 npm test                 # testes do servidor e do cliente
 npm run typecheck
 ```
@@ -19,12 +19,12 @@ npm run typecheck
 Na primeira execução, os POPs de `pops/` são copiados para `data/pops/`. O banco
 fica em `data/lugom.db`. A pasta `data/` não é versionada.
 
-Variáveis (`.env`): `PORT` (10060), `DATABASE_PATH` (`data/lugom.db`),
+Variáveis (`.env`): `PORT` (10061), `DATABASE_PATH` (`data/lugom.db`),
 `POPS_DIR` (`data/pops`).
 
 ## Servidor (systemd)
 
-O app roda como o serviço `lugom-limpezas`, na porta 10060, a partir do clone.
+O app roda como o serviço `lugom-limpezas`, na porta 10061, a partir do clone.
 Ele traz o próprio Node 24 em `.node/`, então o Node do sistema não é alterado.
 
 **Instalar (uma vez):**
