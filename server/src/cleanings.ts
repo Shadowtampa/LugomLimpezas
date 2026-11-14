@@ -214,3 +214,18 @@ export function setTask(d: Deps, id: string, task: string, done: boolean) {
   });
   return cleaningView(d, id);
 }
+
+// Últimas limpezas de todos os ambientes, da mais recente para a mais antiga.
+export function recentCleanings(d: Deps, names: Map<string, string>, limit = 50) {
+  const rows = d.db.prepare("SELECT id, environment, status, started_at, active_ms, running_since, ended_at, total_ms FROM cleanings ORDER BY started_at DESC, rowid DESC LIMIT ?").all(limit) as CleaningRow[];
+  const now = nowMs(d);
+  return rows.map((c) => ({
+    id: c.id,
+    environment: c.environment,
+    environmentName: names.get(c.environment) ?? c.environment,
+    status: c.status,
+    startedAt: c.started_at,
+    endedAt: c.ended_at,
+    totalMs: c.total_ms ?? activeMs(c, now),
+  }));
+}

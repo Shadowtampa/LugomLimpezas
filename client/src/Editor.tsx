@@ -1,7 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { api, ApiError } from './api.ts';
 
-export function Editor({ slug }: { slug: string }) {
+type Props = {
+  title: string;
+  filename: string;
+  fileUrl: string; // GET: texto exato do arquivo
+  saveUrl: string; // PUT { toon }, relativo a /api
+  back: string;
+  hint?: ReactNode;
+};
+
+export function Editor({ title, filename, fileUrl, saveUrl, back, hint }: Props) {
   const [original, setOriginal] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [error, setError] = useState('');
@@ -9,10 +18,10 @@ export function Editor({ slug }: { slug: string }) {
   const dirty = original !== null && text !== original;
 
   useEffect(() => {
-    fetch(`/api/environments/${slug}/pop.toon`)
-      .then((r) => (r.ok ? r.text() : Promise.reject(new Error('Ambiente não encontrado'))))
+    fetch(fileUrl)
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error('Arquivo não encontrado'))))
       .then((t) => { setOriginal(t); setText(t); }, (e: Error) => setError(e.message));
-  }, [slug]);
+  }, [fileUrl]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -21,7 +30,6 @@ export function Editor({ slug }: { slug: string }) {
     return () => removeEventListener('beforeunload', warn);
   }, [dirty]);
 
-  const back = `#/a/${slug}`;
   function leave() {
     if (!dirty || confirm('Há alterações não salvas. Sair mesmo assim?')) location.hash = back;
   }
@@ -31,7 +39,7 @@ export function Editor({ slug }: { slug: string }) {
     setBusy(true);
     setError('');
     try {
-      await api(`/environments/${slug}/pop`, { method: 'PUT', body: { toon: text } });
+      await api(saveUrl, { method: 'PUT', body: { toon: text } });
       setOriginal(text);
       location.hash = back;
     } catch (e) {
@@ -44,12 +52,13 @@ export function Editor({ slug }: { slug: string }) {
   return (
     <>
       <p><a href={back} onClick={(e) => { e.preventDefault(); leave(); }}>← Voltar</a></p>
-      <h1>Editar POP</h1>
+      <h1>{title}</h1>
+      {hint && <p className="muted">{hint}</p>}
       {error && <p role="alert" className="erro">{error}</p>}
       {original === null && !error && <p aria-busy="true">Carregando…</p>}
       {original !== null && (
         <>
-          <label htmlFor="toon" className="rotulo">Conteúdo do arquivo {slug}.toon</label>
+          <label htmlFor="toon" className="rotulo">Conteúdo do arquivo {filename}</label>
           <textarea
             id="toon"
             className="editor"

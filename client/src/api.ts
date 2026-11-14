@@ -23,6 +23,19 @@ export type CleaningView = {
   etapas: Etapa[];
   progress: { done: number; total: number };
 };
+export type DashboardView = {
+  agenda: Record<"domingo" | "segunda" | "terca" | "quarta" | "quinta" | "sexta" | "sabado", string[]>;
+  agendaError: PopProblem | null;
+  recent: {
+    id: string;
+    environment: string;
+    environmentName: string;
+    status: "in_progress" | "completed" | "abandoned";
+    startedAt: string;
+    endedAt: string | null;
+    totalMs: number;
+  }[];
+};
 export type HistoryItem = {
   id: string;
   startedAt: string;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError, type EnvironmentItem } from './api.ts';
+import { Dashboard } from './Dashboard.tsx';
 
 type Pending = { filename: string; toon: string; name: string };
 
@@ -42,6 +43,7 @@ export function Home() {
   return (
     <>
       <h1>Lugom Limpezas</h1>
+      <Dashboard envs={envs} />
       <h2 id="ambientes">Ambientes</h2>
       {error && <p role="alert" className="erro">{error}</p>}
       {!envs && !error && <p aria-busy="true">Carregando…</p>}

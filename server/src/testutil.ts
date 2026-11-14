@@ -12,5 +12,6 @@ export function makeApp() {
   for (const f of ['escritorio.toon', 'banheiro-escritorio.toon']) copyFileSync(join(seeds, f), join(popsDir, f));
   const db = openDb(':memory:');
   const clock = { t: Date.parse('2026-01-01T12:00:00Z') };
-  return { app: createApp({ popsDir, db, now: () => clock.t }), db, popsDir, clock };
+  const agendaFile = join(mkdtempSync(join(tmpdir(), 'agenda-')), 'agenda.toon');
+  return { app: createApp({ popsDir, db, agendaFile, now: () => clock.t }), db, popsDir, agendaFile, clock };
 }

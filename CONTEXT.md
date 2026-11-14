@@ -57,3 +57,11 @@ _Avoid_: finalizada, fechada, completa
 **Abandonada**:
 Estado de uma Limpeza deixada para trás sem ser Concluída, para dar lugar a uma nova. Ela guarda o progresso e o tempo até ali e fica só para consulta.
 _Avoid_: cancelada, descartada, expirada
+
+**Agenda**:
+O plano da semana: quais Ambientes limpar em cada dia da semana. É uma sugestão, não obriga nada.
+_Avoid_: calendário, cronograma
+
+**Painel**:
+A tela inicial, com as sugestões de Hoje, a Semana e as últimas Limpezas.
+_Avoid_: dashboard

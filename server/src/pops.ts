@@ -1,7 +1,7 @@
 import { decode } from '@toon-format/toon';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { z } from 'zod';
 
 export const MAX_POP_BYTES = 100 * 1024;
@@ -39,7 +39,10 @@ export class PopError extends Error {
   constructor(problem: PopProblem) { super(problem.message); this.problem = problem; }
 }
 
-export function parsePop(text: string, file: string): Pop {
+export const parsePop = (text: string, file: string): Pop => parseToon(text, file, PopSchema);
+
+// Decodifica o TOON e valida com o schema; usado pelos POPs e pela agenda.
+export function parseToon<S extends z.ZodType>(text: string, file: string, schema: S): z.output<S> {
   if (Buffer.byteLength(text) > MAX_POP_BYTES) throw new PopError({ file, message: 'arquivo acima de 100 KB' });
   let data: unknown;
   try {
@@ -50,7 +53,7 @@ export function parsePop(text: string, file: string): Pop {
     const m = /^Line (\d+):\s*(.*)$/s.exec(msg);
     throw new PopError({ file, line: m ? Number(m[1]) : undefined, message: m ? m[2] : msg });
   }
-  const r = PopSchema.safeParse(data);
+  const r = schema.safeParse(data);
   if (!r.success) {
     const message = r.error.issues.map((i) => (i.path.length ? `${i.path.join('.')}: ` : '') + i.message).join('; ');
     throw new PopError({ file, message });
@@ -85,13 +88,17 @@ export function readPopText(popsDir: string, slug: string): string | null {
   try { return readFileSync(join(popsDir, `${slug}.toon`), 'utf8'); } catch { return null; }
 }
 
-// Valida e grava exatamente o texto recebido; escreve num temporário e renomeia (atômico).
+// Escreve num temporário e renomeia: uma falha nunca deixa o arquivo pela metade.
+export function atomicWrite(path: string, text: string) {
+  mkdirSync(dirname(path), { recursive: true });
+  const tmp = join(dirname(path), `.${randomUUID()}.tmp`);
+  writeFileSync(tmp, text, "utf8");
+  renameSync(tmp, path);
+}
+
+// Valida e grava exatamente o texto recebido.
 export function writePopText(popsDir: string, slug: string, text: string): Pop {
-  const file = `${slug}.toon`;
-  const pop = parsePop(text, file);
-  mkdirSync(popsDir, { recursive: true });
-  const tmp = join(popsDir, `.${slug}.${randomUUID()}.tmp`);
-  writeFileSync(tmp, text, 'utf8');
-  renameSync(tmp, join(popsDir, file));
+  const pop = parsePop(text, `${slug}.toon`);
+  atomicWrite(join(popsDir, `${slug}.toon`), text);
   return pop;
 }
