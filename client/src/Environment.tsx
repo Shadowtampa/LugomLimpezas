@@ -62,6 +62,10 @@ export function Environment({ slug }: { slug: string }) {
               </button>
             </div>
           )}
+          <div className="acoes">
+            <a className="botao" href={`#/a/${slug}/editar`}>Editar POP</a>
+            <a className="botao" href={`/api/environments/${slug}/pop.toon`} download>Baixar .toon</a>
+          </div>
         </>
       )}
     </>

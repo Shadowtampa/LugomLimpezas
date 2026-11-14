@@ -1,5 +1,6 @@
 import { decode } from '@toon-format/toon';
-import { readdirSync, readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 
@@ -70,4 +71,21 @@ export function listEnvironments(popsDir: string): EnvironmentItem[] {
     try { return { slug, name: readPop(popsDir, slug).ambiente }; }
     catch (e) { return { slug, error: e instanceof PopError ? e.problem : { file: f, message: String(e) } }; }
   });
+}
+
+// Texto exato do arquivo (mesmo que inválido), para exportar e abrir no editor.
+export function readPopText(popsDir: string, slug: string): string | null {
+  if (!SLUG_RE.test(slug)) return null;
+  try { return readFileSync(join(popsDir, `${slug}.toon`), 'utf8'); } catch { return null; }
+}
+
+// Valida e grava exatamente o texto recebido; escreve num temporário e renomeia (atômico).
+export function writePopText(popsDir: string, slug: string, text: string): Pop {
+  const file = `${slug}.toon`;
+  const pop = parsePop(text, file);
+  mkdirSync(popsDir, { recursive: true });
+  const tmp = join(popsDir, `.${slug}.${randomUUID()}.tmp`);
+  writeFileSync(tmp, text, 'utf8');
+  renameSync(tmp, join(popsDir, file));
+  return pop;
 }
