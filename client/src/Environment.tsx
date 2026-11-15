@@ -72,7 +72,7 @@ export function Environment({ slug }: { slug: string }) {
               {env.history.map((h) => (
                 <li key={h.id} className={`status-${h.status}`}>
                   <span className="data">{formatDate(h.startedAt)}</span>
-                  <span className="status">{STATUS[h.status]}</span>
+                  <span className="status">{STATUS[h.status]}{h.score !== null && <span className="nota-hist" aria-label={`nota ${h.score}`}> · ★ {h.score}</span>}</span>
                   <span className="tempo-hist">{formatDuration(h.totalMs)}</span>
                   <span className="prog">{h.done}/{h.total}</span>
                 </li>

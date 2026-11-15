@@ -88,3 +88,10 @@ label.botao.desabilitado { opacity: .55; cursor: wait; }
   .recentes .ambiente-nome { grid-column: 1; grid-row: 2; }
   .recentes .tempo-hist { grid-column: 2; grid-row: 1; }
 }
+.avaliacao { margin: 1.5rem 0 1rem; display: grid; gap: .6rem; }
+.avaliacao h3 { margin: 0; }
+.notas { display: flex; flex-wrap: wrap; gap: .4rem; }
+.nota { font: inherit; font-weight: 700; min-width: 2.6rem; min-height: 2.6rem; border-radius: .5rem; border: 2px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+.nota.sel { background: var(--accent); border-color: var(--accent); color: #1a1500; }
+.melhorar { width: 100%; padding: .75rem; background: var(--surface); color: var(--text); border: 2px solid var(--border); border-radius: .6rem; font: inherit; font-size: 1rem; resize: vertical; }
+.nota-hist { color: var(--accent); }

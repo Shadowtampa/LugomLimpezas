@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { readAgenda, readAgendaText, writeAgendaText } from './agenda.ts';
-import { cleaningView, environmentView, recentCleanings, pauseCleaning, resumeCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
+import { cleaningView, environmentView, recentCleanings, pauseCleaning, resumeCleaning, reviewCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
 import { HttpError } from './http.ts';
 import { listEnvironments, parsePop, PopError, readPopText, writePopText } from './pops.ts';
 
@@ -15,6 +15,7 @@ const PopBody = z.object({ toon: z.string() });
 const ImportBody = z.object({ filename: z.string(), toon: z.string(), replace: z.boolean().optional() });
 const IMPORT_NAME = /^([a-z0-9-]+).toon$/;
 const TaskBody = z.object({ task: z.string().min(1), done: z.boolean() });
+const ReviewBody = z.object({ score: z.number().int().min(1).max(10), improvements: z.string().max(2000).default('') });
 
 export function createApp(cfg: Config) {
   const app = express();
@@ -34,6 +35,11 @@ export function createApp(cfg: Config) {
     const body = TaskBody.safeParse(req.body);
     if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { task, done }');
     res.json(setTask(cfg, req.params.id, body.data.task, body.data.done));
+  });
+  app.put('/api/cleanings/:id/review', (req, res) => {
+    const body = ReviewBody.safeParse(req.body);
+    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { score: 1 a 10, improvements? (até 2000 caracteres) }');
+    res.json(reviewCleaning(cfg, req.params.id, body.data.score, body.data.improvements.trim()));
   });
 
   app.get('/api/environments/:slug/pop.toon', (req, res) => {

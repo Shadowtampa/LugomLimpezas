@@ -14,6 +14,26 @@ function useNow(running: boolean) {
   return now;
 }
 
+// R10: nota de 1 a 10 e pontos a melhorar; o servidor só aceita em limpeza concluída.
+function Avaliacao({ review, busy, onSave }: { review: CleaningView['review']; busy: boolean; onSave: (score: number, improvements: string) => void }) {
+  const [score, setScore] = useState(review?.score ?? 0);
+  const [text, setText] = useState(review?.improvements ?? '');
+  const saved = !!review && review.score === score && review.improvements === text.trim();
+  return (
+    <form className="avaliacao" onSubmit={(e) => { e.preventDefault(); onSave(score, text); }}>
+      <h3>Como foi esta limpeza?</h3>
+      <div role="radiogroup" aria-label="Nota de 1 a 10" className="notas">
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+          <button key={n} type="button" role="radio" aria-checked={score === n} className={`nota${score === n ? ' sel' : ''}`} onClick={() => setScore(n)}>{n}</button>
+        ))}
+      </div>
+      <label htmlFor="melhorar">O que eu poderia melhorar?</label>
+      <textarea id="melhorar" className="melhorar" rows={4} maxLength={2000} value={text} onChange={(e) => setText(e.target.value)} />
+      <button className="botao primario" disabled={busy || score === 0 || saved}>{saved ? 'Avaliação salva ✓' : 'Salvar avaliação'}</button>
+    </form>
+  );
+}
+
 export function Cleaning({ id }: { id: string }) {
   const [c, setC] = useState<CleaningView | null>(null);
   const [receivedAt, setReceivedAt] = useState(Date.now());
@@ -95,7 +115,8 @@ export function Cleaning({ id }: { id: string }) {
               </ul>
             </>
           )}
-          <a className="botao primario" href={`#/a/${c.environment}`}>Voltar ao ambiente</a>
+          <Avaliacao review={c.review} busy={busy} onSave={(score, improvements) => call('/review', 'PUT', { score, improvements })} />
+          <a className="botao" href={`#/a/${c.environment}`}>Voltar ao ambiente</a>
           <p className="dica">Desmarcar uma atividade na lista abaixo reabre a limpeza, pausada.</p>
         </section>
       )}

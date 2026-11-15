@@ -65,3 +65,7 @@ _Avoid_: calendário, cronograma
 **Painel**:
 A tela inicial, com as sugestões de Hoje, a Semana e as últimas Limpezas.
 _Avoid_: dashboard
+
+**Avaliação**:
+A nota (1 a 10) e os pontos a melhorar que você dá a uma Limpeza Concluída. É a sua opinião sobre como ela foi, não uma verificação.
+_Avoid_: feedback, review, auditoria
