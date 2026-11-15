@@ -182,6 +182,15 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
   servidor tira a cerca antes de validar e gravar.
 - Sem nenhum comentário no ambiente, o botão avisa (`409`).
 
+### R12. Pré-visualização
+
+- **Pré-visualizar** (tela do ambiente) mostra o POP salvo como a limpeza o
+  mostra: etapas com objetivo e aviso e as atividades em ordem, com descrição.
+  Só leitura: não cria limpeza, não grava nada e não mexe em recordes.
+- Em **Editar POP**, **Pré-visualizar** mostra como ficaria o texto digitado,
+  antes de salvar (útil para conferir o TOON devolvido pela IA, R11). Texto
+  inválido mostra o erro (com a linha, quando houver) em vez da prévia.
+
 ## 5. Formato do arquivo TOON
 
 ```toon
@@ -355,6 +364,8 @@ Prefixo `/api`. Toda entrada é validada com Zod.
 | GET    | `/dashboard`                           | Agenda por dia da semana e as últimas 50 limpezas de todos os ambientes (seção 15) |
 | GET    | `/agenda.toon`                         | Exporta o arquivo da agenda                                                |
 | PUT    | `/agenda`                              | Corpo `{ "toon": "<texto>" }`; valida e grava a agenda. Erro de validação: `400` |
+| GET    | `/environments/:slug/pop`              | O POP atual decodificado, para a pré-visualização (R12)                    |
+| POST   | `/pop-preview`                         | Corpo `{ "toon": "<texto>" }`; devolve o POP decodificado sem gravar. Inválido: `400` |
 | GET    | `/environments/:slug/prompt-ia`        | Texto do prompt para melhorar o POP com IA (R11). Sem comentários: `409`   |
 | PUT    | `/environments/:slug/pop`              | Corpo `{ "toon": "<texto>" }`; valida e grava (R9). Erro de validação: `400` |
 | POST   | `/environments/import`                 | Corpo `{ "filename": "x.toon", "toon": "<texto>", "replace": true }`; cria ou substitui. Ambiente existente sem `replace`: `409` |

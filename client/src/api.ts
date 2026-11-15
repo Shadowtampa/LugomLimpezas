@@ -1,6 +1,7 @@
 export type PopProblem = { file: string; line?: number; message: string };
 export type EnvironmentItem = { slug: string; name?: string; error?: PopProblem };
 
+export type PopView = { ambiente: string; etapas: { titulo: string; objetivo: string; aviso?: string; atividades: { texto: string; descricao?: string }[] }[] };
 export type Atividade = { text: string; descricao?: string; done: boolean; lapMs?: number; recordMs?: number; deltaMs?: number };
 export type Etapa = { titulo: string; objetivo: string; aviso?: string; atividades: Atividade[] };
 export type CleaningResult = {

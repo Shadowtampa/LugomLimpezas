@@ -101,6 +101,7 @@ export function Environment({ slug }: { slug: string }) {
           )}
 
           <div className="acoes">
+            <a className="botao" href={`#/a/${slug}/previa`}>Pré-visualizar</a>
             <a className="botao" href={`#/a/${slug}/editar`}>Editar POP</a>
             <a className="botao" href={`/api/environments/${slug}/pop.toon`} download>Baixar .toon</a>
             <button className="botao" onClick={improve}>Melhorar com IA (processo manual)</button>

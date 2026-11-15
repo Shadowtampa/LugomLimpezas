@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { api, ApiError } from './api.ts';
+import { api, ApiError, type PopView } from './api.ts';
+import { PopPreview } from './PopPreview.tsx';
 
 type Props = {
   title: string;
@@ -8,13 +9,15 @@ type Props = {
   saveUrl: string; // PUT { toon }, relativo a /api
   back: string;
   hint?: ReactNode;
+  preview?: boolean; // POP: mostra como o texto digitado ficaria, sem salvar
 };
 
-export function Editor({ title, filename, fileUrl, saveUrl, back, hint }: Props) {
+export function Editor({ title, filename, fileUrl, saveUrl, back, hint, preview }: Props) {
   const [original, setOriginal] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pop, setPop] = useState<PopView | null>(null);
   const dirty = original !== null && text !== original;
 
   useEffect(() => {
@@ -32,6 +35,16 @@ export function Editor({ title, filename, fileUrl, saveUrl, back, hint }: Props)
 
   function leave() {
     if (!dirty || confirm('Há alterações não salvas. Sair mesmo assim?')) location.hash = back;
+  }
+
+  async function showPreview() {
+    setError('');
+    try { setPop(await api<PopView>('/pop-preview', { method: 'POST', body: { toon: text } })); }
+    catch (e) {
+      setPop(null);
+      const problem = e instanceof ApiError ? (e.body as { problem?: { line?: number } } | undefined)?.problem : undefined;
+      setError(`${problem?.line ? `Linha ${problem.line}: ` : ''}${(e as Error).message}`);
+    }
   }
 
   async function save() {
@@ -69,8 +82,10 @@ export function Editor({ title, filename, fileUrl, saveUrl, back, hint }: Props)
           />
           <div className="acoes">
             <button className="botao primario" onClick={save} disabled={busy || !dirty}>Salvar</button>
+            {preview && <button className="botao" onClick={showPreview} disabled={busy}>Pré-visualizar</button>}
             <button className="botao" onClick={leave} disabled={busy}>Cancelar</button>
           </div>
+          {pop && <PopPreview pop={pop} />}
         </>
       )}
     </>
