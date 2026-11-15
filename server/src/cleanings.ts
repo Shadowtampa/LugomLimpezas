@@ -176,6 +176,15 @@ export function cleaningView(d: Deps, id: string) {
   };
 }
 
+// R3: só uma limpeza abandonada pode ser excluída; as voltas dela saem dos recordes (R6).
+export function deleteCleaning(d: Deps, id: string) {
+  if (getRow(d, id).status !== 'abandoned') throw new HttpError(409, 'só uma limpeza abandonada pode ser excluída');
+  transaction(d.db, () => {
+    d.db.prepare('DELETE FROM cleaning_tasks WHERE cleaning_id = ?').run(id);
+    d.db.prepare('DELETE FROM cleanings WHERE id = ?').run(id);
+  });
+}
+
 function requireInProgress(row: CleaningRow) {
   if (row.status !== 'in_progress') throw new HttpError(409, 'a limpeza não está em andamento');
 }
