@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Etapa } from './api.ts';
-import { currentAndNext, currentEtapaIndex } from './progress.ts';
+import { currentAndNext, currentEtapaIndex, previewView, togglePreview } from './progress.ts';
 
 const etapas = (marks: boolean[][]): Etapa[] =>
   marks.map((m, i) => ({ titulo: `E${i}`, objetivo: 'o', atividades: m.map((done, j) => ({ text: `${i}.${j}`, done })) }));
@@ -20,5 +20,19 @@ describe('atividade atual e próxima', () => {
   it('etapa atual acompanha a atividade atual', () => {
     expect(currentEtapaIndex(etapas([[true], [false]]))).toBe(1);
     expect(currentEtapaIndex(etapas([[true], [true]]))).toBe(1);
+  });
+});
+
+describe('pré-visualização', () => {
+  const pop = { ambiente: 'Sala', etapas: [{ titulo: 'A', objetivo: 'o', atividades: [{ texto: 'x' }, { texto: 'y', descricao: 'd' }] }] };
+  it('começa sem nada marcado e sem cronômetro, e marcar/desmarcar só muda o estado local', () => {
+    const v = previewView(pop);
+    expect(v).toMatchObject({ running: false, activeMs: 0, result: null, progress: { done: 0, total: 2 } });
+    expect(currentAndNext(v.etapas)).toEqual({ current: 'x', next: 'y' });
+    const m = togglePreview(v, 'x', true);
+    expect(m.progress.done).toBe(1);
+    expect(currentAndNext(m.etapas).current).toBe('y');
+    expect(v.progress.done).toBe(0);
+    expect(togglePreview(m, 'x', false).progress.done).toBe(0);
   });
 });
