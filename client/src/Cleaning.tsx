@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { api, type CleaningView } from './api.ts';
+import { api, type CleaningView, type PopView } from './api.ts';
 import { deltaClass, formatDelta, formatDuration } from './format.ts';
-import { currentAndNext, currentEtapaIndex } from './progress.ts';
+import { currentAndNext, currentEtapaIndex, previewView, togglePreview } from './progress.ts';
 
 // O servidor manda o tempo ativo; o navegador só soma o que passou desde que recebeu.
 function useNow(running: boolean) {
@@ -34,8 +34,9 @@ function Avaliacao({ review, busy, onSave }: { review: CleaningView['review']; b
   );
 }
 
-export function Cleaning({ id }: { id: string }) {
-  const [c, setC] = useState<CleaningView | null>(null);
+// Com `pop`, é a pré-visualização (R12): a mesma tela, mas local, sem cronômetro e sem gravar.
+export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
+  const [c, setC] = useState<CleaningView | null>(pop ? previewView(pop) : null);
   const [receivedAt, setReceivedAt] = useState(Date.now());
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -48,6 +49,7 @@ export function Cleaning({ id }: { id: string }) {
   }
 
   useEffect(() => {
+    if (!id) return;
     api<CleaningView>(`/cleanings/${id}`).then(apply, (e: Error) => setError(e.message));
   }, [id]);
 
@@ -64,7 +66,7 @@ export function Cleaning({ id }: { id: string }) {
       setBusy(false);
     }
   }
-  const mark = (task: string, done: boolean) => call('/tasks', 'PUT', { task, done });
+  const mark = (task: string, done: boolean) => (pop ? setC((v) => togglePreview(v!, task, done)) : call('/tasks', 'PUT', { task, done }));
 
   if (!c) {
     return error ? <p role="alert" className="erro">{error}</p> : <p aria-busy="true">Carregando…</p>;
@@ -77,9 +79,15 @@ export function Cleaning({ id }: { id: string }) {
 
   return (
     <>
-      <p><a href={`#/a/${c.environment}`}>← {c.environmentName}</a></p>
-      <h1>{c.environmentName}</h1>
+      {!pop && <p><a href={`#/a/${c.environment}`}>← {c.environmentName}</a></p>}
+      {pop ? <h2>{c.environmentName}</h2> : <h1>{c.environmentName}</h1>}
 
+      {pop ? (
+        <div className="card previa-faixa" role="status">
+          <p><strong>Pré-visualização:</strong> o tempo não corre e nada é gravado.</p>
+          <button className="botao" onClick={() => setC(previewView(pop))}>Recomeçar prévia</button>
+        </div>
+      ) : (
       <div className="cronometro">
         <span className="tempo" role="timer" aria-label="Tempo ativo">{formatDuration(elapsed)}</span>
         {c.status === 'in_progress' && (
@@ -89,6 +97,7 @@ export function Cleaning({ id }: { id: string }) {
         )}
         {c.status === 'in_progress' && !c.running && <span className="pausado">Pausado</span>}
       </div>
+      )}
       <p className="progresso" aria-label="Progresso">{c.progress.done}/{c.progress.total}</p>
       {error && <p role="alert" className="erro">{error}</p>}
       {locked && <p className="aviso">Limpeza abandonada: só para consulta.</p>}
@@ -132,6 +141,8 @@ export function Cleaning({ id }: { id: string }) {
 
       )}
 
+      {pop && !current && <p className="card" role="status">Fim da pré-visualização: todas as atividades foram marcadas.</p>}
+
       {current && !c.result && (
         <section className="card atual" aria-label="Atividade atual">
           <h2>Agora</h2>
@@ -143,7 +154,7 @@ export function Cleaning({ id }: { id: string }) {
         </section>
       )}
 
-      {c.status === 'in_progress' && (confirming ? (
+      {!pop && c.status === 'in_progress' && (confirming ? (
         <div className="card confirmacao" role="alertdialog" aria-labelledby="abandona-txt">
           <p id="abandona-txt">A limpeza ({c.progress.done}/{c.progress.total}) será marcada como abandonada e não aceitará mais marcações. Continuar?</p>
           <div className="acoes">

@@ -184,12 +184,15 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
 
 ### R12. Pré-visualização
 
-- **Pré-visualizar** (tela do ambiente) mostra o POP salvo como a limpeza o
-  mostra: etapas com objetivo e aviso e as atividades em ordem, com descrição.
-  Só leitura: não cria limpeza, não grava nada e não mexe em recordes.
-- Em **Editar POP**, **Pré-visualizar** mostra como ficaria o texto digitado,
-  antes de salvar (útil para conferir o TOON devolvido pela IA, R11). Texto
-  inválido mostra o erro (com a linha, quando houver) em vez da prévia.
+- **Pré-visualizar** (tela do ambiente) abre a tela da limpeza como se uma
+  tivesse sido iniciada: etapa atual, **Agora** com o botão **Feito**, próxima
+  atividade e a lista completa com checkboxes. A diferença: não há cronômetro,
+  recorde nem resultado, e nada é enviado ao servidor. As marcações vivem só na
+  página; **Recomeçar prévia** zera, e recarregar também.
+- Não cria limpeza, não grava nada e não mexe em recordes nem no histórico.
+- Em **Editar POP**, **Pré-visualizar** faz o mesmo com o texto digitado, antes
+  de salvar (útil para conferir o TOON devolvido pela IA, R11). Texto inválido
+  mostra o erro (com a linha, quando houver) em vez da prévia.
 
 ## 5. Formato do arquivo TOON
 

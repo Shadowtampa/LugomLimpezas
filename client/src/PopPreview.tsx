@@ -1,32 +1,9 @@
 import { useEffect, useState } from 'react';
 import { api, type PopView } from './api.ts';
+import { Cleaning } from './Cleaning.tsx';
 
-// Mostra o POP como a limpeza o mostra (etapas, avisos, atividades), só para leitura.
-export function PopPreview({ pop }: { pop: PopView }) {
-  const total = pop.etapas.reduce((n, e) => n + e.atividades.length, 0);
-  return (
-    <section aria-label="Pré-visualização">
-      <h2>{pop.ambiente} · {total} atividades</h2>
-      {pop.etapas.map((e, i) => (
-        <div key={i} className="grupo">
-          <div className="card etapa">
-            <h3>{i + 1}. {e.titulo}</h3>
-            <p>{e.objetivo}</p>
-            {e.aviso && <p className="aviso"><strong>Aviso:</strong> {e.aviso}</p>}
-          </div>
-          <ol className="previa-atividades">
-            {e.atividades.map((a) => (
-              <li key={a.texto}>
-                {a.texto}
-                {a.descricao && <small className="descricao">{a.descricao}</small>}
-              </li>
-            ))}
-          </ol>
-        </div>
-      ))}
-    </section>
-  );
-}
+// A tela de limpeza, mas local: sem cronômetro, sem recorde e sem gravar nada.
+export const PopPreview = ({ pop }: { pop: PopView }) => <Cleaning key={JSON.stringify(pop)} pop={pop} />;
 
 export function Previa({ slug }: { slug: string }) {
   const [pop, setPop] = useState<PopView | null>(null);
@@ -35,8 +12,6 @@ export function Previa({ slug }: { slug: string }) {
   return (
     <>
       <p><a href={`#/a/${slug}`}>← Voltar ao ambiente</a></p>
-      <h1>Pré-visualização</h1>
-      <p className="muted">Assim o POP aparece numa limpeza. Nada é iniciado nem gravado.</p>
       {error && <p role="alert" className="erro">{error}</p>}
       {!pop && !error && <p aria-busy="true">Carregando…</p>}
       {pop && <PopPreview pop={pop} />}
