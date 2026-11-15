@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { readAgenda, readAgendaText, writeAgendaText } from './agenda.ts';
 import { abandonCleaning, cleaningView, environmentView, recentCleanings, pauseCleaning, resumeCleaning, reviewCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
+import { improvementPrompt, unfence } from './improve.ts';
 import { HttpError } from './http.ts';
 import { listEnvironments, parsePop, PopError, readPopText, writePopText } from './pops.ts';
 
@@ -48,12 +49,15 @@ export function createApp(cfg: Config) {
     if (text === null) throw new HttpError(404, 'ambiente não encontrado');
     res.attachment(`${req.params.slug}.toon`).type("text/plain; charset=utf-8").send(text);
   });
+  app.get('/api/environments/:slug/prompt-ia', (req, res) => {
+    res.type('text/plain; charset=utf-8').send(improvementPrompt(cfg, req.params.slug));
+  });
   app.put('/api/environments/:slug/pop', (req, res) => {
     if (readPopText(cfg.popsDir, req.params.slug) === null) throw new HttpError(404, 'ambiente não encontrado');
     const body = PopBody.safeParse(req.body);
     if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { toon }');
     try {
-      writePopText(cfg.popsDir, req.params.slug, body.data.toon);
+      writePopText(cfg.popsDir, req.params.slug, unfence(body.data.toon));
     } catch (e) {
       if (e instanceof PopError) throw new HttpError(400, e.message, { problem: e.problem });
       throw e;
