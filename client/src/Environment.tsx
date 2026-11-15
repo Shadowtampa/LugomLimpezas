@@ -9,6 +9,8 @@ export function Environment({ slug }: { slug: string }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [prompt, setPrompt] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     api<EnvironmentView>(`/environments/${slug}`).then(setEnv, (e: Error) => setError(e.message));
@@ -25,6 +27,24 @@ export function Environment({ slug }: { slug: string }) {
       setBusy(false);
     }
   }
+
+  // Processo manual: monta o prompt no servidor e copia. Em http sem HTTPS o clipboard não existe; cai no execCommand.
+  async function improve() {
+    setError('');
+    setCopied(false);
+    try {
+      const r = await fetch(`/api/environments/${slug}/prompt-ia`);
+      if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? `Erro ${r.status}`);
+      setPrompt(await r.text());
+    } catch (e) { setError((e as Error).message); }
+  }
+
+  useEffect(() => {
+    if (prompt === null) return;
+    const el = document.getElementById('prompt-ia') as HTMLTextAreaElement | null;
+    el?.select();
+    (navigator.clipboard?.writeText(prompt) ?? Promise.reject(new Error())).then(() => true, () => document.execCommand('copy')).then(setCopied);
+  }, [prompt]);
 
   const cur = env?.inProgress;
 
@@ -83,7 +103,14 @@ export function Environment({ slug }: { slug: string }) {
           <div className="acoes">
             <a className="botao" href={`#/a/${slug}/editar`}>Editar POP</a>
             <a className="botao" href={`/api/environments/${slug}/pop.toon`} download>Baixar .toon</a>
+            <button className="botao" onClick={improve}>Melhorar com IA (processo manual)</button>
           </div>
+          {prompt !== null && (
+            <section className="card" aria-label="Prompt para a IA">
+              <p>{copied ? 'Prompt copiado.' : 'Selecione o texto e copie (Ctrl+C).'} Cole numa IA, converse até aprovar as mudanças e, quando ela devolver o TOON novo, use <a href={`#/a/${slug}/editar`}>Editar POP</a>: cole no lugar do texto atual e salve.</p>
+              <textarea id="prompt-ia" className="editor prompt-ia" readOnly value={prompt} aria-label="Prompt para a IA" />
+            </section>
+          )}
         </>
       )}
     </>

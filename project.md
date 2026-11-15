@@ -167,6 +167,21 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
   fica guardada e volta a aparecer quando ela for concluída de novo.
 - O histórico do ambiente (R8) mostra a nota de cada limpeza avaliada.
 
+### R11. Melhorar o POP com IA (processo manual)
+
+- Na tela do ambiente, **Melhorar com IA (processo manual)** monta um prompt e o
+  copia (se o navegador não permitir, o texto aparece selecionado para copiar).
+  O prompt traz: as regras para a IA, o formato do TOON, a nota da limpeza mais
+  recente com comentário, o POP atual e **todos** os comentários (R10) do
+  ambiente, do mais recente para o mais antigo, também em TOON.
+- As regras mandam a IA **não alterar nada antes de eu aprovar**: primeiro ela
+  propõe as melhorias, e só depois da aprovação gera o POP novo completo em
+  TOON, **sem os comentários**, num único bloco de código.
+- A volta é manual: o TOON novo é colado em **Editar POP**, que valida e
+  sobrescreve o arquivo (R9). Se o texto vier dentro de uma cerca ```toon, o
+  servidor tira a cerca antes de validar e gravar.
+- Sem nenhum comentário no ambiente, o botão avisa (`409`).
+
 ## 5. Formato do arquivo TOON
 
 ```toon
@@ -340,6 +355,7 @@ Prefixo `/api`. Toda entrada é validada com Zod.
 | GET    | `/dashboard`                           | Agenda por dia da semana e as últimas 50 limpezas de todos os ambientes (seção 15) |
 | GET    | `/agenda.toon`                         | Exporta o arquivo da agenda                                                |
 | PUT    | `/agenda`                              | Corpo `{ "toon": "<texto>" }`; valida e grava a agenda. Erro de validação: `400` |
+| GET    | `/environments/:slug/prompt-ia`        | Texto do prompt para melhorar o POP com IA (R11). Sem comentários: `409`   |
 | PUT    | `/environments/:slug/pop`              | Corpo `{ "toon": "<texto>" }`; valida e grava (R9). Erro de validação: `400` |
 | POST   | `/environments/import`                 | Corpo `{ "filename": "x.toon", "toon": "<texto>", "replace": true }`; cria ou substitui. Ambiente existente sem `replace`: `409` |
 
