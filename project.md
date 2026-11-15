@@ -151,6 +151,18 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
   atividades, não ao arquivo: substituir o arquivo não apaga nada.
 - Limite de tamanho do arquivo: 100 KB.
 
+### R10. Auto-avaliação
+
+- Uma Limpeza concluída pode receber uma **Avaliação**: uma nota inteira de 1 a
+  10 (obrigatória) e um texto livre com os pontos a melhorar (opcional, até
+  2000 caracteres).
+- A Avaliação aparece na tela de resultado, onde também é feita. Salvar de novo
+  substitui a anterior. Só limpezas concluídas aceitam Avaliação (`409` nas
+  outras).
+- Desmarcar uma atividade reabre a limpeza (R7), mas a Avaliação já salva
+  fica guardada e volta a aparecer quando ela for concluída de novo.
+- O histórico do ambiente (R8) mostra a nota de cada limpeza avaliada.
+
 ## 5. Formato do arquivo TOON
 
 ```toon
@@ -281,6 +293,8 @@ O POP não fica no banco, só as limpezas.
 | `active_ms`      | INTEGER NOT NULL  | Tempo ativo acumulado até a última pausa                     |
 | `running_since`  | TEXT NULL         | Quando o cronômetro foi retomado; `NULL` se estiver pausado  |
 | `total_ms`       | INTEGER NULL      | Tempo total; preenchido ao concluir ou abandonar             |
+| `score`          | INTEGER NULL      | Nota da auto-avaliação, de 1 a 10 (R10)                      |
+| `improvements`   | TEXT NULL         | Pontos a melhorar da auto-avaliação (R10)                    |
 
 Tempo ativo agora = `active_ms` + (agora − `running_since`, se não for nulo).
 
@@ -316,6 +330,7 @@ Prefixo `/api`. Toda entrada é validada com Zod.
 | POST   | `/cleanings/:id/pause`                 | Pausa                                                                      |
 | POST   | `/cleanings/:id/resume`                | Retoma                                                                     |
 | PUT    | `/cleanings/:id/tasks`                 | Corpo `{ "task": "<texto>", "done": true \| false }`; marca ou desmarca     |
+| PUT    | `/cleanings/:id/review`                | Corpo `{ "score": 1-10, "improvements": "<texto>" }`; grava a auto-avaliação (R10). Nota inválida: `400`; limpeza não concluída: `409` |
 | GET    | `/environments/:slug/pop.toon`         | Exporta o arquivo TOON como download                                       |
 | GET    | `/dashboard`                           | Agenda por dia da semana e as últimas 50 limpezas de todos os ambientes (seção 15) |
 | GET    | `/agenda.toon`                         | Exporta o arquivo da agenda                                                |
@@ -360,7 +375,8 @@ em andamento, o histórico (R8) e os botões **Editar POP** e **Baixar .toon**.
 
 ### 9.4. Resultado
 Tempo total, diferença para a limpeza mais rápida (ou *"Novo recorde!"*), as
-atividades em que você bateu o recorde, e um botão para voltar ao ambiente.
+atividades em que você bateu o recorde, o formulário de auto-avaliação (nota
+de 1 a 10 e *"O que eu poderia melhorar?"*) e um botão para voltar ao ambiente.
 
 ### 9.5. Editar POP
 Caixa de texto com o TOON do arquivo (fonte monoespaçada), **Salvar** e
@@ -460,6 +476,8 @@ No frontend: o cálculo da atividade atual e da próxima.
 - [ ] Marcar a última atividade conclui a limpeza e mostra o resultado.
 - [ ] Iniciar com uma em andamento pede confirmação e abandona a anterior.
 - [ ] O histórico mostra data, tempo, status e progresso.
+- [ ] Na tela de resultado é possível dar uma nota de 1 a 10 e anotar pontos a
+  melhorar; a nota aparece no histórico.
 - [ ] O estado sobrevive a recarregar a página.
 - [ ] É possível editar um POP pela interface; a edição é gravada no
   arquivo e aparece na próxima limpeza.

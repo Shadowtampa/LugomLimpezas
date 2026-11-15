@@ -20,6 +20,7 @@ export type CleaningView = {
   running: boolean;
   endedAt: string | null;
   result: CleaningResult | null;
+  review: { score: number; improvements: string } | null;
   etapas: Etapa[];
   progress: { done: number; total: number };
 };
@@ -40,6 +41,7 @@ export type HistoryItem = {
   id: string;
   startedAt: string;
   status: 'in_progress' | 'completed' | 'abandoned';
+  score: number | null;
   totalMs: number;
   done: number;
   total: number;

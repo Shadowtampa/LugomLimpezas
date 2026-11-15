@@ -16,6 +16,8 @@ type CleaningRow = {
   running_since: string | null;
   ended_at: string | null;
   total_ms: number | null;
+  score: number | null;
+  improvements: string | null;
 };
 
 const nowMs = (d: Deps) => (d.now ? d.now() : Date.now());
@@ -39,7 +41,7 @@ const allTasks = (pop: Pop) => pop.etapas.flatMap((e) => e.atividades.map((a) =>
 
 function getRow(d: Deps, id: string): CleaningRow {
   const row = d.db
-    .prepare('SELECT id, environment, status, started_at, active_ms, running_since, ended_at, total_ms FROM cleanings WHERE id = ?')
+    .prepare('SELECT id, environment, status, started_at, active_ms, running_since, ended_at, total_ms, score, improvements FROM cleanings WHERE id = ?')
     .get(id) as CleaningRow | undefined;
   if (!row) throw new HttpError(404, 'limpeza não encontrada');
   return row;
@@ -66,12 +68,13 @@ function history(d: Deps, slug: string, pop: Pop) {
   const marked = new Map<string, number>();
   const rows = d.db.prepare("SELECT cleaning_id, task FROM cleaning_tasks WHERE cleaning_id IN (SELECT id FROM cleanings WHERE environment = ?)").all(slug) as { cleaning_id: string; task: string }[];
   for (const r of rows) if (inPop.has(r.task)) marked.set(r.cleaning_id, (marked.get(r.cleaning_id) ?? 0) + 1);
-  const cleanings = d.db.prepare("SELECT id, environment, status, started_at, active_ms, running_since, ended_at, total_ms FROM cleanings WHERE environment = ? ORDER BY started_at DESC, rowid DESC").all(slug) as CleaningRow[];
+  const cleanings = d.db.prepare("SELECT id, environment, status, started_at, active_ms, running_since, ended_at, total_ms, score, improvements FROM cleanings WHERE environment = ? ORDER BY started_at DESC, rowid DESC").all(slug) as CleaningRow[];
   const now = nowMs(d);
   return cleanings.map((c) => ({
     id: c.id,
     startedAt: c.started_at,
     status: c.status,
+    score: c.score,
     // concluída e abandonada: tempo gravado; em andamento: tempo corrido até agora
     totalMs: c.total_ms ?? activeMs(c, now),
     done: marked.get(c.id) ?? 0,
@@ -156,6 +159,7 @@ export function cleaningView(d: Deps, id: string) {
     running: row.running_since !== null,
     endedAt: row.ended_at,
     result,
+    review: row.score === null ? null : { score: row.score, improvements: row.improvements ?? '' },
     etapas,
     progress: { done: tasks.filter((t) => laps.has(t)).length, total: tasks.length },
   };
@@ -212,6 +216,13 @@ export function setTask(d: Deps, id: string, task: string, done: boolean) {
       }
     }
   });
+  return cleaningView(d, id);
+}
+
+// R10: só uma limpeza concluída recebe nota; salvar de novo substitui a avaliação anterior.
+export function reviewCleaning(d: Deps, id: string, score: number, improvements: string) {
+  if (getRow(d, id).status !== 'completed') throw new HttpError(409, 'só uma limpeza concluída pode ser avaliada');
+  d.db.prepare('UPDATE cleanings SET score = ?, improvements = ? WHERE id = ?').run(score, improvements, id);
   return cleaningView(d, id);
 }
 
