@@ -57,3 +57,27 @@ describe('abandonar ao iniciar outra', () => {
     expect(v.etapas[0].atividades[0].recordMs).toBe(s(25));
   });
 });
+
+describe('abandonar explicitamente', () => {
+  it('abandona a limpeza em andamento guardando o tempo, libera o ambiente e não aceita mais marcações', async () => {
+    const c = makeApp();
+    const id = (await request(c.app).post('/api/environments/escritorio/cleanings')).body.id;
+    c.clock.t += s(25);
+    const r = await request(c.app).post(`/api/cleanings/${id}/abandon`);
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ status: 'abandoned', running: false, activeMs: s(25) });
+    c.clock.t += s(100);
+    expect((await request(c.app).get(`/api/cleanings/${id}`)).body.activeMs).toBe(s(25));
+    expect((await request(c.app).get('/api/environments/escritorio')).body.inProgress).toBeNull();
+    expect((await request(c.app).put(`/api/cleanings/${id}/tasks`).send({ task: A, done: true })).status).toBe(409);
+    expect((await request(c.app).post('/api/environments/escritorio/cleanings')).status).toBe(201);
+  });
+
+  it('409 se já não está em andamento e 404 se não existe', async () => {
+    const c = makeApp();
+    const id = (await request(c.app).post('/api/environments/escritorio/cleanings')).body.id;
+    await request(c.app).post(`/api/cleanings/${id}/abandon`);
+    expect((await request(c.app).post(`/api/cleanings/${id}/abandon`)).status).toBe(409);
+    expect((await request(c.app).post('/api/cleanings/nao-existe/abandon')).status).toBe(404);
+  });
+});

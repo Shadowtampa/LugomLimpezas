@@ -90,6 +90,20 @@ function fastestMs(d: Deps, slug: string, exceptId = ''): number | null {
   return r.m;
 }
 
+function markAbandoned(d: Deps, row: CleaningRow) {
+  const total = activeMs(row, nowMs(d));
+  d.db.prepare("UPDATE cleanings SET status = 'abandoned', ended_at = ?, total_ms = ?, active_ms = ?, running_since = NULL WHERE id = ?")
+    .run(iso(nowMs(d)), total, total, row.id);
+}
+
+// R3: abandono explícito; guarda o progresso e o tempo até aqui.
+export function abandonCleaning(d: Deps, id: string) {
+  const row = getRow(d, id);
+  requireInProgress(row);
+  markAbandoned(d, row);
+  return cleaningView(d, id);
+}
+
 export function startCleaning(d: Deps, slug: string, abandonCurrent = false) {
   loadPop(d, slug);
   return transaction(d.db, () => {
@@ -97,10 +111,7 @@ export function startCleaning(d: Deps, slug: string, abandonCurrent = false) {
     if (existing) {
       if (!abandonCurrent) throw new HttpError(409, 'já existe uma limpeza em andamento neste ambiente', { currentId: existing.id });
       // R3: a anterior vira abandonada (com o tempo até aqui) e a nova nasce na mesma transação.
-      const row = getRow(d, existing.id);
-      const total = activeMs(row, nowMs(d));
-      d.db.prepare("UPDATE cleanings SET status = 'abandoned', ended_at = ?, total_ms = ?, active_ms = ?, running_since = NULL WHERE id = ?")
-        .run(iso(nowMs(d)), total, total, existing.id);
+      markAbandoned(d, getRow(d, existing.id));
     }
     const id = randomUUID();
     const t = iso(nowMs(d));
