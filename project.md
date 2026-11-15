@@ -200,6 +200,16 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
   de salvar (útil para conferir o TOON devolvido pela IA, R11). Texto inválido
   mostra o erro (com a linha, quando houver) em vez da prévia.
 
+### R13. Notas do ambiente
+
+- Uma **Nota** é um texto solto (até 1000 caracteres) sobre o ambiente, sem
+  ligação com uma limpeza: por exemplo, *"organizar a penteadeira"*. Dá para
+  adicionar e excluir, na tela do ambiente, em qualquer momento.
+- As notas vão no prompt para a IA (R11), ao lado dos comentários das limpezas,
+  e o botão passa a funcionar com só notas ou só comentários. Sem nenhum dos
+  dois, responde `409`.
+- Nada as apaga sozinho: depois que a IA aplicou uma ideia, exclua a nota.
+
 ## 5. Formato do arquivo TOON
 
 ```toon
@@ -337,6 +347,15 @@ Tempo ativo agora = `active_ms` + (agora − `running_since`, se não for nulo).
 
 Índice parcial único: `UNIQUE(environment) WHERE status = 'in_progress'`.
 
+### `environment_notes`
+
+| Campo         | Tipo              | Descrição                         |
+| ------------- | ----------------- | --------------------------------- |
+| `id`          | TEXT PRIMARY KEY  | UUID                              |
+| `environment` | TEXT NOT NULL     | Slug do ambiente                  |
+| `text`        | TEXT NOT NULL     | Texto da nota (R13)               |
+| `created_at`  | TEXT NOT NULL     | Data/hora da criação (ISO 8601)   |
+
 ### `cleaning_tasks`
 
 Uma linha por atividade marcada; desmarcar apaga a linha.
@@ -376,6 +395,8 @@ Prefixo `/api`. Toda entrada é validada com Zod.
 | PUT    | `/agenda`                              | Corpo `{ "toon": "<texto>" }`; valida e grava a agenda. Erro de validação: `400` |
 | GET    | `/environments/:slug/pop`              | O POP atual decodificado, para a pré-visualização (R12)                    |
 | POST   | `/pop-preview`                         | Corpo `{ "toon": "<texto>" }`; devolve o POP decodificado sem gravar. Inválido: `400` |
+| POST   | `/environments/:slug/notes`            | Corpo `{ "text": "<1 a 1000 caracteres>" }`; adiciona uma nota (R13). Inválido: `400` |
+| DELETE | `/environments/:slug/notes/:id`        | Exclui a nota do ambiente (`204`; `404` se não existe)                      |
 | GET    | `/environments/:slug/prompt-ia`        | Texto do prompt para melhorar o POP com IA (R11). Sem comentários: `409`   |
 | PUT    | `/environments/:slug/pop`              | Corpo `{ "toon": "<texto>" }`; valida e grava (R9). Erro de validação: `400` |
 | POST   | `/environments/import`                 | Corpo `{ "filename": "x.toon", "toon": "<texto>", "replace": true }`; cria ou substitui. Ambiente existente sem `replace`: `409` |

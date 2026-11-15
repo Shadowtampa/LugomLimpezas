@@ -11,9 +11,24 @@ export function Environment({ slug }: { slug: string }) {
   const [confirming, setConfirming] = useState(false);
   const [prompt, setPrompt] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [noteText, setNoteText] = useState('');
 
   const load = () => api<EnvironmentView>(`/environments/${slug}`).then(setEnv, (e: Error) => setError(e.message));
   useEffect(() => { load(); }, [slug]);
+
+  // R13: notas soltas do ambiente; vão no prompt da IA (R11).
+  async function addNote(ev: React.FormEvent) {
+    ev.preventDefault();
+    if (!noteText.trim()) return;
+    setError('');
+    try { await api(`/environments/${slug}/notes`, { method: 'POST', body: { text: noteText } }); setNoteText(''); await load(); }
+    catch (e) { setError((e as Error).message); }
+  }
+  async function removeNote(id: string) {
+    setError('');
+    try { await api(`/environments/${slug}/notes/${id}`, { method: 'DELETE' }); await load(); }
+    catch (e) { setError((e as Error).message); }
+  }
 
   // R3: só limpeza abandonada pode ser excluída; confirmação nativa, como no editor.
   async function remove(h: EnvironmentView['history'][number]) {
@@ -91,6 +106,24 @@ export function Environment({ slug }: { slug: string }) {
               </button>
             </div>
           )}
+          <h2 id="notas">Notas do ambiente</h2>
+          <form className="nota-form" onSubmit={addNote}>
+            <label htmlFor="nova-nota" className="muted">Uma ideia ou algo a melhorar neste ambiente (vai no prompt da IA)</label>
+            <textarea id="nova-nota" className="melhorar" rows={2} maxLength={1000} value={noteText} onChange={(ev) => setNoteText(ev.target.value)} />
+            <button className="botao" disabled={!noteText.trim()}>Adicionar nota</button>
+          </form>
+          {env.notes.length > 0 && (
+            <ul className="notas-lista" aria-labelledby="notas">
+              {env.notes.map((n) => (
+                <li key={n.id}>
+                  <span className="data">{formatDate(n.createdAt)}</span>
+                  <span className="texto-nota">{n.text}</span>
+                  <button className="excluir" onClick={() => removeNote(n.id)} aria-label={`Excluir nota de ${formatDayMonth(n.createdAt)}`}>Excluir</button>
+                </li>
+              ))}
+            </ul>
+          )}
+
           <h2 id="historico">Histórico</h2>
           {env.history.length === 0 ? (
             <p>Nenhuma limpeza ainda.</p>

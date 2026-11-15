@@ -53,6 +53,7 @@ export type EnvironmentView = {
   inProgress: { id: string; startedAt: string; done: number; total: number } | null;
   fastestMs: number | null;
   history: HistoryItem[];
+  notes: { id: string; text: string; createdAt: string }[];
 };
 
 export class ApiError extends Error {
