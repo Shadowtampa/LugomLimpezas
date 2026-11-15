@@ -100,3 +100,7 @@ label.botao.desabilitado { opacity: .55; cursor: wait; }
 .previa-faixa p { margin: 0; }
 .historico .excluir { font: inherit; font-size: .85rem; color: var(--bad); background: none; border: 1px solid var(--border); border-radius: .4rem; padding: .15rem .6rem; cursor: pointer; }
 @media (max-width: 30rem) { .historico .excluir { grid-column: 1 / -1; justify-self: start; } }
+.hero { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem; }
+.hero h1 { margin: 0; }
+.hero img { border-radius: 24%; flex: none; }
+@media (max-width: 30rem) { .hero img { width: 72px; height: 72px; } }

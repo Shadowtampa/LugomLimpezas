@@ -42,7 +42,10 @@ export function Home() {
 
   return (
     <>
-      <h1>Lugom Limpezas</h1>
+      <header className="hero">
+        <img src="/logo.webp" alt="" width="112" height="112" />
+        <h1>Lugom Limpezas</h1>
+      </header>
       <Dashboard envs={envs} />
       <h2 id="ambientes">Ambientes</h2>
       {error && <p role="alert" className="erro">{error}</p>}
