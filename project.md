@@ -76,8 +76,10 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
   transação.
 - Sem a confirmação explícita no corpo da requisição, o backend responde
   `409`.
-- Não há botão "Abandonar" avulso. Uma limpeza parada continua em andamento
-  até você iniciar outra.
+- Também dá para abandonar sem iniciar outra: o botão **Abandonar limpeza** da
+  tela da limpeza pede confirmação e chama `POST /cleanings/:id/abandon`. O
+  efeito é o mesmo (tempo e progresso guardados, só para consulta); em limpeza
+  que não está em andamento o backend responde `409`.
 
 ### R4. Cronômetro e pausa
 
@@ -125,7 +127,9 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
   total (ou o tempo até o abandono), status e progresso (`23/44`).
 - O progresso é calculado contra o POP atual: o histórico não precisa ser
   fiel a versões antigas do POP.
-- Não há tela de detalhes de cada limpeza.
+- Não há tela de detalhes própria: a data de cada limpeza, aqui e no Painel,
+  abre a tela da limpeza (resultado e Avaliação, se concluída; consulta, se
+  abandonada).
 
 ### R9. Importar, editar e exportar POPs
 
@@ -329,6 +333,7 @@ Prefixo `/api`. Toda entrada é validada com Zod.
 | GET    | `/cleanings/:id`                       | Estado, tarefas marcadas com voltas e recorde de cada atividade            |
 | POST   | `/cleanings/:id/pause`                 | Pausa                                                                      |
 | POST   | `/cleanings/:id/resume`                | Retoma                                                                     |
+| POST   | `/cleanings/:id/abandon`               | Abandona a limpeza em andamento (R3). Não está em andamento: `409`          |
 | PUT    | `/cleanings/:id/tasks`                 | Corpo `{ "task": "<texto>", "done": true \| false }`; marca ou desmarca     |
 | PUT    | `/cleanings/:id/review`                | Corpo `{ "score": 1-10, "improvements": "<texto>" }`; grava a auto-avaliação (R10). Nota inválida: `400`; limpeza não concluída: `409` |
 | GET    | `/environments/:slug/pop.toon`         | Exporta o arquivo TOON como download                                       |

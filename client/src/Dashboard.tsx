@@ -76,7 +76,7 @@ export function Dashboard({ envs }: { envs: EnvironmentItem[] | null }) {
               const dt = new Date(r.startedAt);
               return (
                 <li key={r.id} className={`status-${r.status}`}>
-                  <span className="data"><strong>{DAY_SHORT[dt.getDay()]}</strong> {formatDate(r.startedAt)}</span>
+                  <span className="data"><strong>{DAY_SHORT[dt.getDay()]}</strong> <a href={`#/l/${r.id}`}>{formatDate(r.startedAt)}</a></span>
                   <span className="ambiente-nome"><a href={`#/a/${r.environment}`}>{r.environmentName}</a> <span className="status">{STATUS[r.status as keyof typeof STATUS]}</span></span>
                   <span className="tempo-hist">{formatDuration(r.totalMs)}</span>
                 </li>

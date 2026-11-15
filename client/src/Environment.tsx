@@ -71,7 +71,7 @@ export function Environment({ slug }: { slug: string }) {
             <ul className="historico" aria-labelledby="historico">
               {env.history.map((h) => (
                 <li key={h.id} className={`status-${h.status}`}>
-                  <span className="data">{formatDate(h.startedAt)}</span>
+                  <span className="data"><a href={`#/l/${h.id}`}>{formatDate(h.startedAt)}</a></span>
                   <span className="status">{STATUS[h.status]}{h.score !== null && <span className="nota-hist" aria-label={`nota ${h.score}`}> · ★ {h.score}</span>}</span>
                   <span className="tempo-hist">{formatDuration(h.totalMs)}</span>
                   <span className="prog">{h.done}/{h.total}</span>

@@ -39,6 +39,7 @@ export function Cleaning({ id }: { id: string }) {
   const [receivedAt, setReceivedAt] = useState(Date.now());
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const now = useNow(!!c?.running);
 
   function apply(view: CleaningView) {
@@ -90,6 +91,7 @@ export function Cleaning({ id }: { id: string }) {
       </div>
       <p className="progresso" aria-label="Progresso">{c.progress.done}/{c.progress.total}</p>
       {error && <p role="alert" className="erro">{error}</p>}
+      {locked && <p className="aviso">Limpeza abandonada: só para consulta.</p>}
 
       {c.result && (
         <section className="card resultado" aria-label="Resultado">
@@ -140,6 +142,18 @@ export function Cleaning({ id }: { id: string }) {
           {next && <p className="proxima"><span>Próxima:</span> {next}</p>}
         </section>
       )}
+
+      {c.status === 'in_progress' && (confirming ? (
+        <div className="card confirmacao" role="alertdialog" aria-labelledby="abandona-txt">
+          <p id="abandona-txt">A limpeza ({c.progress.done}/{c.progress.total}) será marcada como abandonada e não aceitará mais marcações. Continuar?</p>
+          <div className="acoes">
+            <button className="botao primario" onClick={async () => { await call('/abandon', 'POST'); setConfirming(false); }} disabled={busy} autoFocus>Abandonar</button>
+            <button className="botao" onClick={() => setConfirming(false)} disabled={busy}>Cancelar</button>
+          </div>
+        </div>
+      ) : (
+        <p><button className="botao" onClick={() => setConfirming(true)} disabled={busy}>Abandonar limpeza</button></p>
+      ))}
 
       <section aria-label="Lista completa">
         {c.etapas.map((e) => (
