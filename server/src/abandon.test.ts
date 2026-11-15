@@ -81,3 +81,34 @@ describe('abandonar explicitamente', () => {
     expect((await request(c.app).post('/api/cleanings/nao-existe/abandon')).status).toBe(404);
   });
 });
+
+describe('excluir limpeza abandonada', () => {
+  it('exclui só abandonada, apaga as voltas (e os recordes delas) e libera 404 depois', async () => {
+    const c = makeApp();
+    const first = (await request(c.app).post('/api/environments/escritorio/cleanings')).body.id;
+    c.clock.t += s(30);
+    await request(c.app).put(`/api/cleanings/${first}/tasks`).send({ task: A, done: true });
+    // em andamento: não pode
+    expect((await request(c.app).delete(`/api/cleanings/${first}`)).status).toBe(409);
+    await request(c.app).post(`/api/cleanings/${first}/abandon`);
+    const second = (await request(c.app).post('/api/environments/escritorio/cleanings')).body.id;
+    expect((await request(c.app).get(`/api/cleanings/${second}`)).body.etapas[0].atividades[0].recordMs).toBe(s(30));
+
+    expect((await request(c.app).delete(`/api/cleanings/${first}`)).status).toBe(204);
+    expect((await request(c.app).get(`/api/cleanings/${first}`)).status).toBe(404);
+    expect((await request(c.app).get(`/api/cleanings/${second}`)).body.etapas[0].atividades[0].recordMs).toBeUndefined();
+    expect((await request(c.app).get('/api/environments/escritorio')).body.history.map((h: any) => h.id)).toEqual([second]);
+    expect((await request(c.app).delete(`/api/cleanings/${first}`)).status).toBe(404);
+    expect((await request(c.app).delete(`/api/cleanings/${second}`)).status).toBe(409);
+  });
+
+  it('não exclui limpeza concluída', async () => {
+    const c = makeApp();
+    const id = (await request(c.app).post('/api/environments/banheiro-escritorio/cleanings')).body.id;
+    const view = (await request(c.app).get(`/api/cleanings/${id}`)).body;
+    for (const t of view.etapas.flatMap((e: any) => e.atividades.map((a: any) => a.text))) {
+      await request(c.app).put(`/api/cleanings/${id}/tasks`).send({ task: t, done: true });
+    }
+    expect((await request(c.app).delete(`/api/cleanings/${id}`)).status).toBe(409);
+  });
+});

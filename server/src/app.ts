@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { readAgenda, readAgendaText, writeAgendaText } from './agenda.ts';
-import { abandonCleaning, cleaningView, environmentView, loadPop, recentCleanings, pauseCleaning, resumeCleaning, reviewCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
+import { abandonCleaning, cleaningView, deleteCleaning, environmentView, loadPop, recentCleanings, pauseCleaning, resumeCleaning, reviewCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
 import { improvementPrompt, unfence } from './improve.ts';
 import { HttpError } from './http.ts';
 import { listEnvironments, parsePop, PopError, readPopText, writePopText } from './pops.ts';
@@ -33,6 +33,7 @@ export function createApp(cfg: Config) {
   app.post('/api/cleanings/:id/pause', (req, res) => { res.json(pauseCleaning(cfg, req.params.id)); });
   app.post('/api/cleanings/:id/resume', (req, res) => { res.json(resumeCleaning(cfg, req.params.id)); });
   app.post('/api/cleanings/:id/abandon', (req, res) => { res.json(abandonCleaning(cfg, req.params.id)); });
+  app.delete('/api/cleanings/:id', (req, res) => { deleteCleaning(cfg, req.params.id); res.status(204).end(); });
   app.put('/api/cleanings/:id/tasks', (req, res) => {
     const body = TaskBody.safeParse(req.body);
     if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { task, done }');

@@ -81,6 +81,12 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
   efeito é o mesmo (tempo e progresso guardados, só para consulta); em limpeza
   que não está em andamento o backend responde `409`.
 
+- **Excluir:** só uma limpeza abandonada pode ser excluída, pelo botão
+  **Excluir** do histórico do ambiente (R8) ou da tela dela, com confirmação.
+  Isso apaga a limpeza e as voltas dela, que deixam de valer para os recordes
+  (R6), e não dá para desfazer. Em limpeza em andamento ou concluída, o
+  backend responde `409`.
+
 ### R4. Cronômetro e pausa
 
 - O tempo conta a partir do clique em Iniciar.
@@ -360,6 +366,7 @@ Prefixo `/api`. Toda entrada é validada com Zod.
 | GET    | `/cleanings/:id`                       | Estado, tarefas marcadas com voltas e recorde de cada atividade            |
 | POST   | `/cleanings/:id/pause`                 | Pausa                                                                      |
 | POST   | `/cleanings/:id/resume`                | Retoma                                                                     |
+| DELETE | `/cleanings/:id`                       | Exclui uma limpeza abandonada (R3) e suas voltas. Outro status: `409`; `204` ao excluir |
 | POST   | `/cleanings/:id/abandon`               | Abandona a limpeza em andamento (R3). Não está em andamento: `409`          |
 | PUT    | `/cleanings/:id/tasks`                 | Corpo `{ "task": "<texto>", "done": true \| false }`; marca ou desmarca     |
 | PUT    | `/cleanings/:id/review`                | Corpo `{ "score": 1-10, "improvements": "<texto>" }`; grava a auto-avaliação (R10). Nota inválida: `400`; limpeza não concluída: `409` |

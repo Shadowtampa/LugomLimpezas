@@ -12,9 +12,16 @@ export function Environment({ slug }: { slug: string }) {
   const [prompt, setPrompt] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    api<EnvironmentView>(`/environments/${slug}`).then(setEnv, (e: Error) => setError(e.message));
-  }, [slug]);
+  const load = () => api<EnvironmentView>(`/environments/${slug}`).then(setEnv, (e: Error) => setError(e.message));
+  useEffect(() => { load(); }, [slug]);
+
+  // R3: só limpeza abandonada pode ser excluída; confirmação nativa, como no editor.
+  async function remove(h: EnvironmentView['history'][number]) {
+    if (!confirm(`Excluir a limpeza abandonada de ${formatDayMonth(h.startedAt)} (${h.done}/${h.total})? O tempo e as voltas dela serão apagados e não dá para desfazer.`)) return;
+    setError('');
+    try { await api(`/cleanings/${h.id}`, { method: 'DELETE' }); await load(); }
+    catch (e) { setError((e as Error).message); }
+  }
 
   async function start(abandonCurrent: boolean) {
     if (busy) return;
@@ -95,6 +102,7 @@ export function Environment({ slug }: { slug: string }) {
                   <span className="status">{STATUS[h.status]}{h.score !== null && <span className="nota-hist" aria-label={`nota ${h.score}`}> · ★ {h.score}</span>}</span>
                   <span className="tempo-hist">{formatDuration(h.totalMs)}</span>
                   <span className="prog">{h.done}/{h.total}</span>
+                  {h.status === 'abandoned' && <button className="excluir" onClick={() => remove(h)} aria-label={`Excluir limpeza abandonada de ${formatDayMonth(h.startedAt)}`}>Excluir</button>}
                 </li>
               ))}
             </ul>

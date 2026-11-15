@@ -100,7 +100,17 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
       )}
       <p className="progresso" aria-label="Progresso">{c.progress.done}/{c.progress.total}</p>
       {error && <p role="alert" className="erro">{error}</p>}
-      {locked && <p className="aviso">Limpeza abandonada: só para consulta.</p>}
+      {locked && (
+        <p className="aviso">
+          Limpeza abandonada: só para consulta.{' '}
+          <button className="botao" disabled={busy} onClick={async () => {
+            if (!confirm('Excluir esta limpeza abandonada? O tempo e as voltas dela serão apagados e não dá para desfazer.')) return;
+            setBusy(true);
+            try { await api(`/cleanings/${id}`, { method: 'DELETE' }); location.hash = `#/a/${c.environment}`; }
+            catch (e) { setError((e as Error).message); setBusy(false); }
+          }}>Excluir limpeza</button>
+        </p>
+      )}
 
       {c.result && (
         <section className="card resultado" aria-label="Resultado">
