@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { readAgenda, readAgendaText, writeAgendaText } from './agenda.ts';
-import { abandonCleaning, cleaningView, environmentView, recentCleanings, pauseCleaning, resumeCleaning, reviewCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
+import { abandonCleaning, cleaningView, environmentView, loadPop, recentCleanings, pauseCleaning, resumeCleaning, reviewCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
 import { improvementPrompt, unfence } from './improve.ts';
 import { HttpError } from './http.ts';
 import { listEnvironments, parsePop, PopError, readPopText, writePopText } from './pops.ts';
@@ -48,6 +48,17 @@ export function createApp(cfg: Config) {
     const text = readPopText(cfg.popsDir, req.params.slug);
     if (text === null) throw new HttpError(404, 'ambiente não encontrado');
     res.attachment(`${req.params.slug}.toon`).type("text/plain; charset=utf-8").send(text);
+  });
+  // Pré-visualização (R12): o POP como a limpeza o mostra, sem criar limpeza.
+  app.get('/api/environments/:slug/pop', (req, res) => { res.json(loadPop(cfg, req.params.slug)); });
+  app.post('/api/pop-preview', (req, res) => {
+    const body = PopBody.safeParse(req.body);
+    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { toon }');
+    try { res.json(parsePop(unfence(body.data.toon), 'pré-visualização.toon')); }
+    catch (e) {
+      if (e instanceof PopError) throw new HttpError(400, e.message, { problem: e.problem });
+      throw e;
+    }
   });
   app.get('/api/environments/:slug/prompt-ia', (req, res) => {
     res.type('text/plain; charset=utf-8').send(improvementPrompt(cfg, req.params.slug));
