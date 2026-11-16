@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { readAgenda, readAgendaText, writeAgendaText } from './agenda.ts';
 import { abandonCleaning, cleaningView, deleteCleaning, environmentView, loadPop, recentCleanings, pauseCleaning, resumeCleaning, reviewCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
+import { addNote, deleteNote } from './notes.ts';
 import { improvementPrompt, unfence } from './improve.ts';
 import { HttpError } from './http.ts';
 import { listEnvironments, parsePop, PopError, readPopText, writePopText } from './pops.ts';
@@ -16,6 +17,7 @@ const PopBody = z.object({ toon: z.string() });
 const ImportBody = z.object({ filename: z.string(), toon: z.string(), replace: z.boolean().optional() });
 const IMPORT_NAME = /^([a-z0-9-]+).toon$/;
 const TaskBody = z.object({ task: z.string().min(1), done: z.boolean() });
+const NoteBody = z.object({ text: z.string().trim().min(1).max(1000) });
 const ReviewBody = z.object({ score: z.number().int().min(1).max(10), improvements: z.string().max(2000).default('') });
 
 export function createApp(cfg: Config) {
@@ -61,6 +63,12 @@ export function createApp(cfg: Config) {
       throw e;
     }
   });
+  app.post('/api/environments/:slug/notes', (req, res) => {
+    const body = NoteBody.safeParse(req.body);
+    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { text } com 1 a 1000 caracteres');
+    res.status(201).json(addNote(cfg, req.params.slug, body.data.text));
+  });
+  app.delete('/api/environments/:slug/notes/:id', (req, res) => { deleteNote(cfg, req.params.slug, req.params.id); res.status(204).end(); });
   app.get('/api/environments/:slug/prompt-ia', (req, res) => {
     res.type('text/plain; charset=utf-8').send(improvementPrompt(cfg, req.params.slug));
   });

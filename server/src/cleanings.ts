@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { transaction } from './db.ts';
 import { HttpError } from './http.ts';
+import { listNotes } from './notes.ts';
 import { PopError, readPop, SLUG_RE, type Pop } from './pops.ts';
 
 // `now` existe para os testes controlarem o relógio.
@@ -59,7 +60,7 @@ export function environmentView(d: Deps, slug: string) {
     const view = cleaningView(d, cur.id);
     current = { id: cur.id, startedAt: view.startedAt, done: view.progress.done, total: view.progress.total };
   }
-  return { slug, name: pop.ambiente, inProgress: current, fastestMs: fastestMs(d, slug), history: history(d, slug, pop) };
+  return { slug, name: pop.ambiente, inProgress: current, fastestMs: fastestMs(d, slug), history: history(d, slug, pop), notes: listNotes(d, slug) };
 }
 
 // R8: da mais recente para a mais antiga; progresso calculado contra o POP atual.

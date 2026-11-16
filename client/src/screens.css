@@ -104,3 +104,10 @@ label.botao.desabilitado { opacity: .55; cursor: wait; }
 .hero h1 { margin: 0; }
 .hero img { border-radius: 24%; flex: none; }
 @media (max-width: 30rem) { .hero img { width: 72px; height: 72px; } }
+.nota-form { display: grid; gap: .5rem; margin-bottom: 1rem; }
+.nota-form .botao { justify-self: start; }
+.notas-lista { list-style: none; padding: 0; margin: 0 0 1.5rem; }
+.notas-lista li { display: grid; grid-template-columns: 6.5rem 1fr auto; gap: .5rem 1rem; align-items: baseline; padding: .6rem .25rem; border-bottom: 1px solid var(--border); }
+.notas-lista .texto-nota { white-space: pre-wrap; overflow-wrap: anywhere; }
+.notas-lista .excluir { font: inherit; font-size: .85rem; color: var(--bad); background: none; border: 1px solid var(--border); border-radius: .4rem; padding: .15rem .6rem; cursor: pointer; }
+@media (max-width: 30rem) { .notas-lista li { grid-template-columns: 1fr auto; } .notas-lista .data { grid-column: 1 / -1; } }
