@@ -122,3 +122,19 @@ label.botao.desabilitado { opacity: .55; cursor: wait; }
   .home > section[aria-labelledby=semana] { grid-row: 3; }
   .home > .lista { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 }
+
+/* Acabamento da Home (R-visual): cartões com o mesmo vocabulário e um pouco de vida ao passar o mouse. */
+.home .hero { padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+.home .hoje { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--surface)), var(--surface) 70%); }
+.home section[aria-labelledby=ultimas] { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1rem 1.25rem .5rem; margin-bottom: .75rem; }
+.home section[aria-labelledby=ultimas] h2 { margin-top: 0; }
+.home section[aria-labelledby=ultimas] .historico { margin-bottom: 0; }
+.home section[aria-labelledby=ultimas] .historico li:last-child { border-bottom: 0; }
+.home .dia { transition: border-color .15s, transform .15s; }
+.home .dia:hover { border-color: var(--muted); transform: translateY(-2px); }
+.home .dia.hoje-dia { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.home .lista .card { margin: 0; transition: border-color .15s, transform .15s, box-shadow .15s; }
+.home .lista .card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 18px rgb(0 0 0 / .35); }
+.home .lista .card-link::after { content: "→"; float: right; color: var(--muted); transition: color .15s, transform .15s; }
+.home .lista .card:hover .card-link::after { color: var(--accent); transform: translateX(3px); }
+@media (prefers-reduced-motion: reduce) { .home * { transition: none !important; transform: none !important; } }
