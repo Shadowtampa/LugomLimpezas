@@ -111,3 +111,14 @@ label.botao.desabilitado { opacity: .55; cursor: wait; }
 .notas-lista .texto-nota { white-space: pre-wrap; overflow-wrap: anywhere; }
 .notas-lista .excluir { font: inherit; font-size: .85rem; color: var(--bad); background: none; border: 1px solid var(--border); border-radius: .4rem; padding: .15rem .6rem; cursor: pointer; }
 @media (max-width: 30rem) { .notas-lista li { grid-template-columns: 1fr auto; } .notas-lista .data { grid-column: 1 / -1; } }
+
+/* Desktop: a Home ocupa a largura em vez de uma coluna estreita; no celular fica como está. */
+@media (min-width: 64rem) {
+  main:has(.home) { max-width: 72rem; }
+  .home { display: grid; grid-template-columns: 1fr 1fr; column-gap: 2rem; align-items: start; }
+  .home > * { grid-column: 1 / -1; }
+  .home > .hoje { grid-column: 1; grid-row: 2; }
+  .home > section[aria-labelledby=ultimas] { grid-column: 2; grid-row: 2; }
+  .home > section[aria-labelledby=semana] { grid-row: 3; }
+  .home > .lista { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+}

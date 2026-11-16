@@ -41,7 +41,7 @@ export function Home() {
   }
 
   return (
-    <>
+    <div className="home">
       <header className="hero">
         <img src="/logo.webp" alt="" width="112" height="112" />
         <h1>Lugom Limpezas</h1>
@@ -94,6 +94,6 @@ export function Home() {
         </div>
       )}
       {importError && <p role="alert" className="erro">{importError}</p>}
-    </>
+    </div>
   );
 }
