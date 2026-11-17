@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { readAgenda, readAgendaText, writeAgendaText } from './agenda.ts';
-import { abandonCleaning, cleaningView, deleteCleaning, environmentView, loadPop, recentCleanings, pauseCleaning, resumeCleaning, reviewCleaning, setTask, startCleaning, type Deps } from './cleanings.ts';
+import { cleaningView, deleteCleaning, environmentView, loadPop, recentCleanings, reviewCleaning, submitCleaning, SubmitBody, taskRecords, type Deps } from './cleanings.ts';
 import { addNote, deleteNote } from './notes.ts';
 import { improvementPrompt, unfence } from './improve.ts';
 import { HttpError } from './http.ts';
@@ -12,11 +12,9 @@ import { listEnvironments, parsePop, PopError, readPopText, writePopText } from 
 
 export type Config = Deps & { agendaFile: string; clientDir?: string };
 
-const StartBody = z.object({ abandonCurrent: z.boolean().optional() });
 const PopBody = z.object({ toon: z.string() });
 const ImportBody = z.object({ filename: z.string(), toon: z.string(), replace: z.boolean().optional() });
 const IMPORT_NAME = /^([a-z0-9-]+).toon$/;
-const TaskBody = z.object({ task: z.string().min(1), done: z.boolean() });
 const NoteBody = z.object({ text: z.string().trim().min(1).max(1000) });
 const ReviewBody = z.object({ score: z.number().int().min(1).max(10), improvements: z.string().max(2000).default('') });
 
@@ -26,21 +24,19 @@ export function createApp(cfg: Config) {
 
   app.get('/api/environments', (_req, res) => { res.json(listEnvironments(cfg.popsDir)); });
   app.get('/api/environments/:slug', (req, res) => { res.json(environmentView(cfg, req.params.slug)); });
-  app.post('/api/environments/:slug/cleanings', (req, res) => {
-    const body = StartBody.safeParse(req.body ?? {});
-    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { abandonCurrent? }');
-    res.status(201).json(startCleaning(cfg, req.params.slug, body.data.abandonCurrent));
+  // Envio único: o navegador guarda a limpeza em andamento e manda tudo aqui ao finalizar ou abandonar.
+  app.post('/api/cleanings', (req, res) => {
+    const body = SubmitBody.safeParse(req.body);
+    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { id, ambiente, status, eventos[] }');
+    const { created, view } = submitCleaning(cfg, body.data);
+    res.status(created ? 201 : 200).json(view);
+  });
+  app.get('/api/environments/:slug/records', (req, res) => {
+    loadPop(cfg, req.params.slug);
+    res.json(Object.fromEntries(taskRecords(cfg, req.params.slug)));
   });
   app.get('/api/cleanings/:id', (req, res) => { res.json(cleaningView(cfg, req.params.id)); });
-  app.post('/api/cleanings/:id/pause', (req, res) => { res.json(pauseCleaning(cfg, req.params.id)); });
-  app.post('/api/cleanings/:id/resume', (req, res) => { res.json(resumeCleaning(cfg, req.params.id)); });
-  app.post('/api/cleanings/:id/abandon', (req, res) => { res.json(abandonCleaning(cfg, req.params.id)); });
   app.delete('/api/cleanings/:id', (req, res) => { deleteCleaning(cfg, req.params.id); res.status(204).end(); });
-  app.put('/api/cleanings/:id/tasks', (req, res) => {
-    const body = TaskBody.safeParse(req.body);
-    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { task, done }');
-    res.json(setTask(cfg, req.params.id, body.data.task, body.data.done));
-  });
   app.put('/api/cleanings/:id/review', (req, res) => {
     const body = ReviewBody.safeParse(req.body);
     if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { score: 1 a 10, improvements? (até 2000 caracteres) }');

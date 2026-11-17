@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type EnvironmentView } from './api.ts';
+import { addEvent, clearDraft, draftDone, loadDraft, saveDraft, startDraft } from './draft.ts';
 import { formatDate, formatDayMonth, formatDuration } from './format.ts';
 
 const STATUS = { in_progress: '▶ Em andamento', completed: '✓ Concluída', abandoned: '✕ Abandonada' } as const;
@@ -38,12 +39,19 @@ export function Environment({ slug }: { slug: string }) {
     catch (e) { setError((e as Error).message); }
   }
 
+  // Iniciar não fala com o servidor: cria o rascunho local. Abandonar o rascunho anterior é o único envio daqui.
   async function start(abandonCurrent: boolean) {
     if (busy) return;
     setBusy(true);
     try {
-      const { id } = await api<{ id: string }>(`/environments/${slug}/cleanings`, { method: 'POST', body: { abandonCurrent } });
-      location.hash = `#/l/${id}`;
+      const old = loadDraft(slug);
+      if (old && abandonCurrent) {
+        await api('/cleanings', { method: 'POST', body: { id: old.id, ambiente: slug, status: 'abandonada', eventos: addEvent(old, 'abandono').eventos } });
+        clearDraft(slug);
+      }
+      const d = startDraft(slug);
+      saveDraft(d);
+      location.hash = `#/l/${d.id}`;
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
@@ -68,7 +76,8 @@ export function Environment({ slug }: { slug: string }) {
     (navigator.clipboard?.writeText(prompt) ?? Promise.reject(new Error())).then(() => true, () => document.execCommand('copy')).then(setCopied);
   }, [prompt]);
 
-  const cur = env?.inProgress;
+  const draft = loadDraft(slug);
+  const cur = env && draft ? { id: draft.id, startedAt: draft.eventos[0].em, done: draftDone(draft), total: env.total } : null;
 
   return (
     <>

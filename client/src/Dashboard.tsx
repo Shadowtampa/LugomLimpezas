@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type DashboardView, type EnvironmentItem } from './api.ts';
+import { allDrafts } from './draft.ts';
 import { formatDate, formatDuration } from './format.ts';
 import { completedOn, DAY_LONG, DAY_SHORT, weekOf } from './week.ts';
 
@@ -18,7 +19,7 @@ export function Dashboard({ envs }: { envs: EnvironmentItem[] | null }) {
   const week = weekOf(new Date());
   const today = week.find((w) => w.isToday)!;
   const doneToday = completedOn(d.recent, today.day);
-  const running = new Set(d.recent.filter((r) => r.status === 'in_progress').map((r) => r.environment));
+  const running = new Set(allDrafts().map((x) => x.ambiente)); // em andamento = rascunho neste aparelho
   const planned = d.agenda[today.key];
 
   return (

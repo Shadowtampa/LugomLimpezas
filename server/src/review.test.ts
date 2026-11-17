@@ -1,16 +1,8 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { makeApp } from './testutil.ts';
+import { abandoned, finish, makeApp } from './testutil.ts';
 
-async function completed(c: ReturnType<typeof makeApp>) {
-  const id = (await request(c.app).post('/api/environments/escritorio/cleanings')).body.id;
-  const view = (await request(c.app).get(`/api/cleanings/${id}`)).body;
-  for (const t of view.etapas.flatMap((e: any) => e.atividades.map((a: any) => a.text))) {
-    c.clock.t += 1000;
-    await request(c.app).put(`/api/cleanings/${id}/tasks`).send({ task: t, done: true });
-  }
-  return id as string;
-}
+const completed = async (c: ReturnType<typeof makeApp>) => (await finish(c, 31)).body.id as string;
 
 describe('auto-avaliação da limpeza', () => {
   it('guarda nota e pontos a melhorar, aparece na limpeza e no histórico, e pode ser regravada', async () => {
@@ -40,7 +32,7 @@ describe('auto-avaliação da limpeza', () => {
 
   it('só avalia limpeza concluída (409) e 404 para id inexistente', async () => {
     const c = makeApp();
-    const open = (await request(c.app).post('/api/environments/escritorio/cleanings')).body.id;
+    const open = (await abandoned(c, 10)).body.id;
     expect((await request(c.app).put(`/api/cleanings/${open}/review`).send({ score: 5 })).status).toBe(409);
     expect((await request(c.app).put('/api/cleanings/nao-existe/review').send({ score: 5 })).status).toBe(404);
   });

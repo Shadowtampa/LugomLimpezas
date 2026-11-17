@@ -3,15 +3,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { makeApp } from './testutil.ts';
+import { finish, makeApp } from './testutil.ts';
 
 async function completedAndReviewed(c: ReturnType<typeof makeApp>, score: number, improvements: string) {
-  const id = (await request(c.app).post('/api/environments/banheiro-escritorio/cleanings')).body.id;
-  const view = (await request(c.app).get(`/api/cleanings/${id}`)).body;
-  for (const t of view.etapas.flatMap((e: any) => e.atividades.map((a: any) => a.text))) {
-    c.clock.t += 1000;
-    await request(c.app).put(`/api/cleanings/${id}/tasks`).send({ task: t, done: true });
-  }
+  const id = (await finish(c, 31, 'banheiro-escritorio')).body.id;
   await request(c.app).put(`/api/cleanings/${id}/review`).send({ score, improvements });
   c.clock.t += 86_400_000;
 }

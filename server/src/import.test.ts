@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { makeApp } from './testutil.ts';
+import { abandoned, makeApp } from './testutil.ts';
 
 const QUARTO = 'ambiente: Quarto\netapas[1]:\n  - titulo: Cama\n    objetivo: arrumar\n    atividades[1]:\n      - Trocar o lençol\n';
 const imp = (c: ReturnType<typeof makeApp>, body: object) => request(c.app).post('/api/environments/import').send(body);
@@ -52,8 +52,7 @@ describe('importar .toon', () => {
 
   it('substituir não apaga limpezas nem voltas', async () => {
     const c = makeApp();
-    const id = (await request(c.app).post('/api/environments/escritorio/cleanings')).body.id;
-    c.db.prepare("INSERT INTO cleaning_tasks (cleaning_id, task, marked_ms, lap_ms, marked_at) VALUES (?, 'x', 1, 1, 'now')").run(id);
+    await abandoned(c, 5, [[5, 'Recolher papéis, documentos e objetos espalhados.']]);
     await imp(c, { filename: 'escritorio.toon', toon: QUARTO, replace: true });
     expect((c.db.prepare('SELECT COUNT(*) AS n FROM cleanings').get() as { n: number }).n).toBe(1);
     expect((c.db.prepare('SELECT COUNT(*) AS n FROM cleaning_tasks').get() as { n: number }).n).toBe(1);
