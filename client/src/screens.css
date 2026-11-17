@@ -122,3 +122,17 @@ label.botao.desabilitado { opacity: .55; cursor: wait; }
   .home > section[aria-labelledby=semana] { grid-row: 3; }
   .home > .lista { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 }
+
+/* Desktop: na limpeza, tempo/etapas de um lado e os cards seção e AGORA do outro, com letras maiores para ler de longe. */
+@media (min-width: 64rem) {
+  main:has(.foco) { max-width: 72rem; }
+  .foco { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); column-gap: 2rem; align-items: start; }
+  .foco .tempo { font-size: 6rem; line-height: 1.1; }
+  .foco .progresso { font-size: 2.5rem; }
+  .foco .cronometro .botao { font-size: 1.3rem; }
+  .foco-cards .card { font-size: 1.4rem; padding: 1.5rem 1.75rem; }
+  .foco-cards h2 { font-size: 1.3rem; }
+  .foco .atividade-atual { font-size: 2.2rem; line-height: 1.3; }
+  .foco .atual .botao.primario { font-size: 1.6rem; padding: 1rem 2.25rem; }
+  .foco .proxima span { font-size: 1rem; }
+}

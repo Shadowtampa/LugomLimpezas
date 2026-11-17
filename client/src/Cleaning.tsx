@@ -125,6 +125,9 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
       {!pop && <p><a href={`#/a/${c.environment}`}>← {c.environmentName}</a></p>}
       {pop ? <h2>{c.environmentName}</h2> : <h1>{c.environmentName}</h1>}
 
+      {/* Desktop: tempo/etapas numa coluna e os cards ao lado (só na limpeza, não na prévia); no celular os wrappers não mudam nada. */}
+      <div className={pop ? undefined : "foco"}>
+      <div className="foco-tempo">
       {pop ? (
         <div className="card previa-faixa" role="status">
           <p><strong>Pré-visualização:</strong> o tempo não corre e nada é gravado.</p>
@@ -154,7 +157,9 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
           }}>Excluir limpeza</button>
         </p>
       )}
+      </div>
 
+      <div className="foco-cards">
       {c.result && (
         <section className="card resultado" aria-label="Resultado">
           <h2>Limpeza concluída</h2>
@@ -205,6 +210,8 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
           {next && <p className="proxima"><span>Próxima:</span> {next}</p>}
         </section>
       )}
+      </div>
+      </div>
 
       {draft && pending && (
         <section className="card" role="status">
