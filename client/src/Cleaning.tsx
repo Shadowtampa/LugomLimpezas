@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type CleaningView, type PopView } from './api.ts';
+import { addEvent, clearDraft, draftView, findDraft, pendingStatus, saveDraft, type Draft } from './draft.ts';
 import { deltaClass, formatDelta, formatDuration } from './format.ts';
 import { currentAndNext, currentEtapaIndex, previewView, togglePreview } from './progress.ts';
 
@@ -34,26 +35,67 @@ function Avaliacao({ review, busy, onSave }: { review: CleaningView['review']; b
   );
 }
 
-// Com `pop`, é a pré-visualização (R12): a mesma tela, mas local, sem cronômetro e sem gravar.
+// Três modos: `pop` = pré-visualização (R12); rascunho local da limpeza em andamento (nada vai ao servidor até finalizar);
+// e a limpeza já gravada (concluída ou abandonada), só para consulta e avaliação.
 export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
   const [c, setC] = useState<CleaningView | null>(pop ? previewView(pop) : null);
   const [receivedAt, setReceivedAt] = useState(Date.now());
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [ctx, setCtx] = useState<{ pop: PopView; records: Record<string, number> } | null>(null);
   const now = useNow(!!c?.running);
 
-  function apply(view: CleaningView) {
-    setReceivedAt(Date.now());
+  function apply(view: CleaningView, at = Date.now()) {
+    setReceivedAt(at);
     setC(view);
   }
 
+  // Com rascunho local: uma leitura do POP e dos recordes, e nenhuma outra requisição até o envio final.
   useEffect(() => {
     if (!id) return;
-    api<CleaningView>(`/cleanings/${id}`).then(apply, (e: Error) => setError(e.message));
+    const d = findDraft(id);
+    if (!d) { api<CleaningView>(`/cleanings/${id}`).then(apply, (e: Error) => setError(e.message)); return; }
+    Promise.all([api<PopView>(`/environments/${d.ambiente}/pop`), api<Record<string, number>>(`/environments/${d.ambiente}/records`)]).then(([p, records]) => {
+      setCtx({ pop: p, records });
+      setDraft(d);
+      apply(draftView(p, records, d, Date.now()));
+    }, (e: Error) => setError(e.message));
   }, [id]);
 
-  // O estado só muda depois que a API confirma; o clique duplo é ignorado enquanto espera.
+  // Toda interação grava o rascunho e remonta a tela; devolve a tela nova.
+  function update(next: Draft) {
+    const t = Date.now();
+    const view = draftView(ctx!.pop, ctx!.records, next, t);
+    saveDraft(next);
+    setDraft(next);
+    apply(view, t);
+    return view;
+  }
+
+  // O envio único (R7, R3): só sai do aparelho quando a limpeza termina ou é abandonada; o rascunho só some depois que o servidor confirma.
+  async function submit(d: Draft, status: 'concluida' | 'abandonada') {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      apply(await api<CleaningView>('/cleanings', { method: 'POST', body: { id: d.id, ambiente: d.ambiente, status, eventos: d.eventos } }));
+      clearDraft(d.ambiente);
+      setDraft(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function markDraft(task: string, done: boolean) {
+    const next = addEvent(draft!, done ? 'feito' : 'desmarcar', task);
+    if (pendingStatus(next, update(next)) === 'concluida') submit(next, 'concluida');
+  }
+
+  // A avaliação (R10) é a única chamada que sobra depois do envio; o clique duplo é ignorado enquanto espera.
   async function call(path: string, method: string, body?: unknown) {
     if (busy) return;
     setBusy(true);
@@ -66,7 +108,7 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
       setBusy(false);
     }
   }
-  const mark = (task: string, done: boolean) => (pop ? setC((v) => togglePreview(v!, task, done)) : call('/tasks', 'PUT', { task, done }));
+  const mark = (task: string, done: boolean) => (pop ? setC((v) => togglePreview(v!, task, done)) : draft ? markDraft(task, done) : undefined);
 
   if (!c) {
     return error ? <p role="alert" className="erro">{error}</p> : <p aria-busy="true">Carregando…</p>;
@@ -74,7 +116,8 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
   const { current, next } = currentAndNext(c.etapas);
   const currentAct = c.etapas.flatMap((e) => e.atividades).find((a) => a.text === current);
   const etapa = c.etapas[currentEtapaIndex(c.etapas)];
-  const locked = c.status === 'abandoned';
+  const locked = !pop && !draft; // limpeza já gravada: só consulta
+  const pending = draft ? pendingStatus(draft, c) : null;
   const elapsed = c.activeMs + (c.running ? now - receivedAt : 0);
 
   return (
@@ -90,17 +133,17 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
       ) : (
       <div className="cronometro">
         <span className="tempo" role="timer" aria-label="Tempo ativo">{formatDuration(elapsed)}</span>
-        {c.status === 'in_progress' && (
-          <button className="botao" onClick={() => call(c.running ? '/pause' : '/resume', 'POST')} disabled={busy}>
+        {draft && !pending && (
+          <button className="botao" onClick={() => update(addEvent(draft, c.running ? 'pausa' : 'retomada'))}>
             {c.running ? 'Pausar' : 'Continuar'}
           </button>
         )}
-        {c.status === 'in_progress' && !c.running && <span className="pausado">Pausado</span>}
+        {draft && !pending && !c.running && <span className="pausado">Pausado</span>}
       </div>
       )}
       <p className="progresso" aria-label="Progresso">{c.progress.done}/{c.progress.total}</p>
       {error && <p role="alert" className="erro">{error}</p>}
-      {locked && (
+      {c.status === 'abandoned' && (
         <p className="aviso">
           Limpeza abandonada: só para consulta.{' '}
           <button className="botao" disabled={busy} onClick={async () => {
@@ -138,7 +181,6 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
           )}
           <Avaliacao review={c.review} busy={busy} onSave={(score, improvements) => call('/review', 'PUT', { score, improvements })} />
           <a className="botao" href={`#/a/${c.environment}`}>Voltar ao ambiente</a>
-          <p className="dica">Desmarcar uma atividade na lista abaixo reabre a limpeza, pausada.</p>
         </section>
       )}
 
@@ -164,11 +206,18 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
         </section>
       )}
 
-      {!pop && c.status === 'in_progress' && (confirming ? (
+      {draft && pending && (
+        <section className="card" role="status">
+          <p>{busy ? 'Enviando…' : pending === 'concluida' ? 'Limpeza terminada: falta enviar.' : 'Abandono pedido: falta enviar.'}</p>
+          {!busy && <button className="botao primario" onClick={() => submit(draft, pending)}>{error ? 'Tentar enviar de novo' : 'Enviar'}</button>}
+        </section>
+      )}
+
+      {draft && !pending && (confirming ? (
         <div className="card confirmacao" role="alertdialog" aria-labelledby="abandona-txt">
           <p id="abandona-txt">A limpeza ({c.progress.done}/{c.progress.total}) será marcada como abandonada e não aceitará mais marcações. Continuar?</p>
           <div className="acoes">
-            <button className="botao primario" onClick={async () => { await call('/abandon', 'POST'); setConfirming(false); }} disabled={busy} autoFocus>Abandonar</button>
+            <button className="botao primario" onClick={() => { const next = addEvent(draft, 'abandono'); update(next); setConfirming(false); submit(next, 'abandonada'); }} disabled={busy} autoFocus>Abandonar</button>
             <button className="botao" onClick={() => setConfirming(false)} disabled={busy}>Cancelar</button>
           </div>
         </div>

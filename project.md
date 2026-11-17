@@ -69,17 +69,14 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
 
 ### R3. Iniciar e abandonar
 
-- Pode haver no máximo uma limpeza em andamento por ambiente.
-- Iniciar com outra em andamento exige confirmação na tela: *"A limpeza de
-  DD/MM (23/44) será marcada como abandonada. Continuar?"*. Ao confirmar, o
-  backend marca a anterior como `abandoned` e cria a nova numa única
-  transação.
-- Sem a confirmação explícita no corpo da requisição, o backend responde
-  `409`.
+- Pode haver no máximo uma limpeza em andamento por ambiente: o rascunho local
+  do ambiente (R14).
+- Iniciar com um rascunho em andamento exige confirmação na tela: *"A limpeza
+  de DD/MM (23/44) será marcada como abandonada. Continuar?"*. Ao confirmar, o
+  rascunho anterior é enviado como abandonado (R14) e o novo nasce.
 - Também dá para abandonar sem iniciar outra: o botão **Abandonar limpeza** da
-  tela da limpeza pede confirmação e chama `POST /cleanings/:id/abandon`. O
-  efeito é o mesmo (tempo e progresso guardados, só para consulta); em limpeza
-  que não está em andamento o backend responde `409`.
+  tela da limpeza pede confirmação e envia o rascunho como abandonado. Tempo e
+  progresso ficam guardados, só para consulta.
 
 - **Excluir:** só uma limpeza abandonada pode ser excluída, pelo botão
   **Excluir** do histórico do ambiente (R8) ou da tela dela, com confirmação.
@@ -92,8 +89,9 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
 - O tempo conta a partir do clique em Iniciar.
 - **Pausar/Continuar** suspende e retoma a contagem. O tempo pausado não conta
   em nada.
-- O relógio de referência é o do servidor; o frontend só exibe a contagem a
-  partir dos valores que recebe.
+- O relógio de referência é o do navegador, que anota o horário de cada
+  evento (R14); o servidor recalcula os tempos a partir deles e o tempo
+  continua correndo com a aba fechada, até pausar.
 
 ### R5. Volta (tempo de uma atividade)
 
@@ -118,14 +116,31 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
 
 ### R7. Fim da limpeza
 
-- Quando todas as atividades do POP atual estão marcadas, o backend conclui a
-  limpeza (`completed`), e o tempo total é o tempo ativo no momento da última
-  marcação.
+- Quando todas as atividades do POP atual estão marcadas, o navegador envia o
+  rascunho (R14) e o backend grava a limpeza como `completed`; o tempo total é
+  o tempo ativo no momento da última marcação.
 - A tela de resultado mostra o tempo total, a diferença para a limpeza mais
   rápida e os recordes de atividade batidos.
-- Desmarcar uma atividade na tela de resultado devolve a limpeza ao estado
-  `in_progress`, pausada.
+- Uma limpeza enviada é definitiva: já não dá para desmarcar atividades dela.
 - Limpezas abandonadas são só para consulta.
+
+### R14. Rascunho no navegador e envio único
+
+- A limpeza em andamento não existe no servidor: é um rascunho em JSON no
+  `localStorage` (chave `limpeza:<ambiente>`), com o `id` (UUID gerado no
+  navegador), o ambiente e uma lista de eventos com horário: `inicio`,
+  `feito`, `desmarcar`, `pausa`, `retomada` e `abandono`. Cada interação
+  acrescenta um evento; a tela é montada a partir deles e sobrevive a recarregar.
+- Ao abrir a limpeza, o navegador lê só o POP e os recordes. Durante o fluxo
+  não há nenhuma outra requisição.
+- Ao marcar a última atividade, ou ao abandonar, o rascunho vai num único
+  `POST /cleanings`. Se falhar, o rascunho fica, a tela mostra o erro e o botão
+  **Tentar enviar de novo**; ele só é apagado depois que o servidor confirma.
+- O servidor recalcula tempo, voltas (R5) e conclusão (R7) a partir dos eventos.
+- A avaliação (R10) continua numa requisição própria, na tela de resultado.
+- A limpeza em andamento só aparece no aparelho onde foi iniciada.
+- Migração 004: as limpezas `in_progress` que existiam no servidor viram
+  `abandoned`.
 
 ### R8. Histórico
 
@@ -380,14 +395,11 @@ Prefixo `/api`. Toda entrada é validada com Zod.
 | Método | Rota                                   | Finalidade                                                                 |
 | ------ | -------------------------------------- | -------------------------------------------------------------------------- |
 | GET    | `/environments`                        | Lista os ambientes (slug, nome ou erro do arquivo)                         |
-| GET    | `/environments/:slug`                  | POP, limpeza mais rápida, limpeza em andamento e histórico                 |
-| POST   | `/environments/:slug/cleanings`        | Inicia uma limpeza. Corpo `{ "abandonCurrent": true }` quando já houver uma; sem ele, `409` |
+| GET    | `/environments/:slug`                  | Nome, total de atividades, limpeza mais rápida, histórico e notas          |
+| POST   | `/cleanings`                           | O envio único da limpeza (R14). `201` ao gravar; `200` se o mesmo `id` já foi gravado |
+| GET    | `/environments/:slug/records`          | Menor volta de cada atividade no ambiente, `{ "<texto>": ms }`              |
 | GET    | `/cleanings/:id`                       | Estado, tarefas marcadas com voltas e recorde de cada atividade            |
-| POST   | `/cleanings/:id/pause`                 | Pausa                                                                      |
-| POST   | `/cleanings/:id/resume`                | Retoma                                                                     |
 | DELETE | `/cleanings/:id`                       | Exclui uma limpeza abandonada (R3) e suas voltas. Outro status: `409`; `204` ao excluir |
-| POST   | `/cleanings/:id/abandon`               | Abandona a limpeza em andamento (R3). Não está em andamento: `409`          |
-| PUT    | `/cleanings/:id/tasks`                 | Corpo `{ "task": "<texto>", "done": true \| false }`; marca ou desmarca     |
 | PUT    | `/cleanings/:id/review`                | Corpo `{ "score": 1-10, "improvements": "<texto>" }`; grava a auto-avaliação (R10). Nota inválida: `400`; limpeza não concluída: `409` |
 | GET    | `/environments/:slug/pop.toon`         | Exporta o arquivo TOON como download                                       |
 | GET    | `/dashboard`                           | Agenda por dia da semana e as últimas 50 limpezas de todos os ambientes (seção 15) |
@@ -401,19 +413,20 @@ Prefixo `/api`. Toda entrada é validada com Zod.
 | PUT    | `/environments/:slug/pop`              | Corpo `{ "toon": "<texto>" }`; valida e grava (R9). Erro de validação: `400` |
 | POST   | `/environments/import`                 | Corpo `{ "filename": "x.toon", "toon": "<texto>", "replace": true }`; cria ou substitui. Ambiente existente sem `replace`: `409` |
 
-O `PUT /cleanings/:id/tasks`:
+O `POST /cleanings` recebe o rascunho inteiro (R14), valida com Zod e grava a
+limpeza, as voltas e o resultado numa transação:
 
-- recusa uma atividade que não existe no POP atual do ambiente (`400`);
-- recusa uma limpeza abandonada (`409`);
-- conclui a limpeza automaticamente quando a última atividade é marcada (R7);
-- ao desmarcar numa limpeza concluída, devolve a limpeza ao estado
-  `in_progress`, pausada;
-- marcar uma atividade já marcada não muda nada, e o mesmo vale para
-  desmarcar uma desmarcada;
-- responde com o estado atualizado da limpeza, incluindo a volta gravada, a
-  diferença para o recorde e, ao concluir, o resultado.
-
-O frontend só mostra uma atividade como marcada depois que a API confirma.
+- `400` para corpo inválido, eventos fora de ordem de horário, primeiro evento
+  que não é `inicio` (ou outro `inicio` depois) e `feito`/`desmarcar` sem
+  atividade, mais de 1000 eventos ou horário mais de 1 dia no futuro;
+  `404` para ambiente inexistente;
+- ignora atividades que não existem mais no POP atual;
+- `status: "concluida"` só vale se todas as atividades do POP atual estão
+  marcadas (R7); senão a limpeza é gravada como `abandoned`, com o que foi feito;
+- é idempotente pelo `id`: reenviar devolve a limpeza já gravada (`200`);
+  `id` de outro ambiente: `409`;
+- responde com o estado da limpeza, incluindo voltas, recordes e, ao concluir,
+  o resultado.
 
 ## 9. Telas
 

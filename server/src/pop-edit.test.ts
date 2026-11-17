@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { makeApp } from './testutil.ts';
+import { abandoned, makeApp } from './testutil.ts';
 
 const A = 'Retirar copos, garrafas, pratos e utensílios de alimentação.';
 const GOOD = 'ambiente: Escritório\r\netapas[1]:\r\n  - titulo: Única  \r\n    objetivo: o\r\n    atividades[2]:\r\n      - Nova atividade\r\n      - Outra\r\n';
@@ -55,11 +55,9 @@ describe('editar e exportar o POP', () => {
     expect((await request(c.app).get('/api/environments/..%2F..%2Fx/pop.toon')).status).toBe(404);
   });
 
-  it('editar com uma limpeza em andamento: atividades novas aparecem e voltas de removidas continuam no banco', async () => {
+  it('editar o POP depois de uma limpeza: atividades novas aparecem e voltas de removidas continuam no banco', async () => {
     const c = makeApp();
-    const id = (await request(c.app).post('/api/environments/escritorio/cleanings')).body.id;
-    c.clock.t += 5000;
-    await request(c.app).put(`/api/cleanings/${id}/tasks`).send({ task: A, done: true });
+    const id = (await abandoned(c, 5, [[5, A]])).body.id;
     await request(c.app).put('/api/environments/escritorio/pop').send({ toon: GOOD });
     const v = (await request(c.app).get(`/api/cleanings/${id}`)).body;
     expect(v.etapas.flatMap((e: any) => e.atividades.map((a: any) => a.text))).toEqual(['Nova atividade', 'Outra']);

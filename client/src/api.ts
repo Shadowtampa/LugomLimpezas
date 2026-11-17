@@ -50,7 +50,7 @@ export type HistoryItem = {
 export type EnvironmentView = {
   slug: string;
   name: string;
-  inProgress: { id: string; startedAt: string; done: number; total: number } | null;
+  total: number;
   fastestMs: number | null;
   history: HistoryItem[];
   notes: { id: string; text: string; createdAt: string }[];

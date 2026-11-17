@@ -4,7 +4,7 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { parseAgenda } from './agenda.ts';
 import { parsePop } from './pops.ts';
-import { makeApp } from './testutil.ts';
+import { abandoned, finish, makeApp } from './testutil.ts';
 
 const root = resolve(import.meta.dirname, '../..');
 const s = (n: number) => n * 1000;
@@ -49,21 +49,19 @@ describe('GET /api/dashboard', () => {
     expect(empty.agendaError).toBeNull();
     expect(empty.recent).toEqual([]);
 
-    const a = (await request(c.app).post('/api/environments/escritorio/cleanings')).body.id;
-    c.clock.t += s(60);
-    const b = (await request(c.app).post('/api/environments/banheiro-escritorio/cleanings')).body.id;
-    c.clock.t += s(5);
+    const a = (await abandoned(c, 65)).body.id;
+    const b = (await finish(c, 5, 'banheiro-escritorio')).body.id;
     const d = (await request(c.app).get('/api/dashboard')).body;
     expect(d.recent.map((r: any) => r.id)).toEqual([b, a]);
-    expect(d.recent[0]).toMatchObject({ environment: 'banheiro-escritorio', environmentName: 'Banheiro do escritório', status: 'in_progress', totalMs: s(5) });
-    expect(d.recent[1]).toMatchObject({ environmentName: 'Escritório', totalMs: s(65) });
+    expect(d.recent[0]).toMatchObject({ environment: 'banheiro-escritorio', environmentName: 'Banheiro do escritório', status: 'completed', totalMs: s(5) });
+    expect(d.recent[1]).toMatchObject({ environmentName: 'Escritório', status: 'abandoned', totalMs: s(65) });
   });
 
   it('a agenda lida do arquivo aparece, e arquivo inválido mostra o erro sem derrubar o resto', async () => {
     const c = makeApp();
     writeFileSync(c.agendaFile, 'sabado[2]: escritorio,banheiro-escritorio\n');
     expect((await request(c.app).get('/api/dashboard')).body.agenda.sabado).toEqual(['escritorio', 'banheiro-escritorio']);
-    await request(c.app).post('/api/environments/escritorio/cleanings');
+    await abandoned(c, 5);
     writeFileSync(c.agendaFile, 'terça[1]: x\n');
     const d = (await request(c.app).get('/api/dashboard')).body;
     expect(d.agendaError.file).toBe('agenda.toon');
