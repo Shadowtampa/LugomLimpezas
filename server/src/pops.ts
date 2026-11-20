@@ -20,8 +20,10 @@ const Etapa = z.object({
   atividades: z.array(Atividade).min(1),
 });
 
+// `nome` é o nome do POP; `ambiente` sobra dos arquivos antigos e é ignorado (o nome do ambiente fica no banco).
 const PopSchema = z.object({
-  ambiente: z.string().min(1),
+  nome: z.string().min(1).optional(),
+  ambiente: z.string().min(1).optional(),
   etapas: z.array(Etapa).min(1),
 }).superRefine((pop, ctx) => {
   const seen = new Set<string>();
@@ -61,31 +63,37 @@ export function parseToon<S extends z.ZodType>(text: string, file: string, schem
   return r.data;
 }
 
-export type EnvironmentItem = { slug: string; name?: string; error?: PopProblem };
+export type PopItem = { slug: string; name?: string; error?: PopProblem };
 
-export function readPop(popsDir: string, slug: string): Pop {
-  const file = `${slug}.toon`;
-  let text: string;
-  try { text = readFileSync(join(popsDir, file), 'utf8'); }
-  catch { throw new PopError({ file, message: 'arquivo não encontrado' }); }
+// Um POP é popsDir/<ambiente>/<pop>.toon; os dois slugs são validados antes de virar caminho.
+const popFile = (env: string, pop: string) => `${env}/${pop}.toon`;
+const safe = (...slugs: string[]) => slugs.every((s) => SLUG_RE.test(s));
+
+export function readPop(popsDir: string, env: string, pop: string): Pop {
+  const file = popFile(env, pop);
+  let text: string | null = null;
+  if (safe(env, pop)) try { text = readFileSync(join(popsDir, file), 'utf8'); } catch { /* abaixo */ }
+  if (text === null) throw new PopError({ file, message: 'arquivo não encontrado' });
   return parsePop(text, file);
 }
 
+export const popName = (pop: Pop, slug: string) => pop.nome ?? slug;
+
 // Relido a cada chamada: editar o arquivo aparece ao recarregar (R1).
-export function listEnvironments(popsDir: string): EnvironmentItem[] {
+export function listPops(popsDir: string, env: string): PopItem[] {
   let files: string[] = [];
-  try { files = readdirSync(popsDir).filter((f) => f.endsWith('.toon')).sort(); } catch { /* pasta ausente = lista vazia */ }
+  if (safe(env)) try { files = readdirSync(join(popsDir, env)).filter((f) => f.endsWith('.toon') && safe(f.slice(0, -5))).sort(); } catch { /* pasta ausente = sem POPs */ }
   return files.map((f) => {
     const slug = f.slice(0, -'.toon'.length);
-    try { return { slug, name: readPop(popsDir, slug).ambiente }; }
-    catch (e) { return { slug, error: e instanceof PopError ? e.problem : { file: f, message: String(e) } }; }
+    try { return { slug, name: popName(readPop(popsDir, env, slug), slug) }; }
+    catch (e) { return { slug, error: e instanceof PopError ? e.problem : { file: popFile(env, slug), message: String(e) } }; }
   });
 }
 
 // Texto exato do arquivo (mesmo que inválido), para exportar e abrir no editor.
-export function readPopText(popsDir: string, slug: string): string | null {
-  if (!SLUG_RE.test(slug)) return null;
-  try { return readFileSync(join(popsDir, `${slug}.toon`), 'utf8'); } catch { return null; }
+export function readPopText(popsDir: string, env: string, pop: string): string | null {
+  if (!safe(env, pop)) return null;
+  try { return readFileSync(join(popsDir, popFile(env, pop)), 'utf8'); } catch { return null; }
 }
 
 // Escreve num temporário e renomeia: uma falha nunca deixa o arquivo pela metade.
@@ -97,8 +105,9 @@ export function atomicWrite(path: string, text: string) {
 }
 
 // Valida e grava exatamente o texto recebido.
-export function writePopText(popsDir: string, slug: string, text: string): Pop {
-  const pop = parsePop(text, `${slug}.toon`);
-  atomicWrite(join(popsDir, `${slug}.toon`), text);
-  return pop;
+export function writePopText(popsDir: string, env: string, pop: string, text: string): Pop {
+  if (!safe(env, pop)) throw new PopError({ file: popFile(env, pop), message: 'nome inválido' });
+  const parsed = parsePop(text, popFile(env, pop));
+  atomicWrite(join(popsDir, popFile(env, pop)), text);
+  return parsed;
 }

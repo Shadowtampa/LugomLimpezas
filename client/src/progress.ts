@@ -16,7 +16,7 @@ export function currentEtapaIndex(etapas: Etapa[]) {
 export function previewView(pop: PopView): CleaningView {
   const etapas = pop.etapas.map((e) => ({ ...e, atividades: e.atividades.map((a) => ({ text: a.texto, descricao: a.descricao, done: false })) }));
   return {
-    id: 'previa', environment: '', environmentName: pop.ambiente, status: 'in_progress', startedAt: '', activeMs: 0, running: false,
+    id: 'previa', environment: '', environmentName: pop.ambiente ?? '', popName: pop.nome, status: 'in_progress', startedAt: '', activeMs: 0, running: false,
     endedAt: null, result: null, review: null, etapas,
     progress: { done: 0, total: etapas.reduce((n, e) => n + e.atividades.length, 0) },
   };

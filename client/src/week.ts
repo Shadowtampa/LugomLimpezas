@@ -21,11 +21,12 @@ export function weekOf(now: Date): WeekDay[] {
   });
 }
 
-export type RecentCleaning = { environment: string; status: string; startedAt: string; endedAt: string | null };
+export type RecentCleaning = { environment: string; pop?: string; status: string; startedAt: string; endedAt: string | null };
 
-// Ambientes com limpeza concluída naquele dia local.
+// Entradas da agenda feitas naquele dia local: o ambiente (qualquer POP) e "ambiente/pop".
 export function completedOn(recent: RecentCleaning[], day: string): Set<string> {
   return new Set(
-    recent.filter((r) => r.status === 'completed' && r.endedAt && localDay(new Date(r.endedAt)) === day).map((r) => r.environment),
+    recent.filter((r) => r.status === 'completed' && r.endedAt && localDay(new Date(r.endedAt)) === day)
+      .flatMap((r) => [r.environment, `${r.environment}/${r.pop ?? 'completo'}`]),
   );
 }

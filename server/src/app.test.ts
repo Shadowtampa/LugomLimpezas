@@ -1,41 +1,31 @@
-import { mkdtempSync, writeFileSync, copyFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import request from 'supertest';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from './app.ts';
-import { openDb } from './db.ts';
+import { describe, expect, it } from 'vitest';
 import { parsePop } from './pops.ts';
-
-const seeds = resolve(import.meta.dirname, '../../pops');
-let dir: string;
-beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'pops-')); });
+import { makeApp } from './testutil.ts';
 
 describe('GET /api/environments', () => {
-  it('lista os ambientes iniciais', async () => {
-    copyFileSync(join(seeds, 'escritorio.toon'), join(dir, 'escritorio.toon'));
-    copyFileSync(join(seeds, 'banheiro-escritorio.toon'), join(dir, 'banheiro-escritorio.toon'));
-    const r = await request(createApp({ popsDir: dir, db: openDb(':memory:'), agendaFile: join(dir, '.agenda.toon') })).get('/api/environments');
+  it('lista os ambientes iniciais, cada um com seus POPs', async () => {
+    const r = await request(makeApp().app).get('/api/environments');
     expect(r.body).toEqual([
-      { slug: 'banheiro-escritorio', name: 'Banheiro do escritório' },
-      { slug: 'escritorio', name: 'Escritório' },
+      { slug: 'banheiro-escritorio', name: 'Banheiro do escritório', pops: [{ slug: 'completo', name: 'Completo' }] },
+      { slug: 'escritorio', name: 'Escritório', pops: [{ slug: 'completo', name: 'Completo' }] },
     ]);
   });
 
-  it('arquivo inválido só quebra o próprio ambiente e vê edição sem reiniciar', async () => {
-    copyFileSync(join(seeds, 'escritorio.toon'), join(dir, 'escritorio.toon'));
-    writeFileSync(join(dir, 'ruim.toon'), 'ambiente: Ruim\netapas:\n  - titulo: A\n');
-    const app = createApp({ popsDir: dir, db: openDb(':memory:'), agendaFile: join(dir, '.agenda.toon') });
-    const r = await request(app).get('/api/environments');
-    expect(r.body.find((e: any) => e.slug === 'escritorio').name).toBe('Escritório');
-    const ruim = r.body.find((e: any) => e.slug === 'ruim');
+  it('POP inválido só quebra o próprio POP e vê edição sem reiniciar', async () => {
+    const c = makeApp();
+    writeFileSync(join(c.popsDir, 'escritorio', 'ruim.toon'), 'nome: Ruim\netapas:\n  - titulo: A\n');
+    const pops = async () => (await request(c.app).get('/api/environments')).body.find((e: any) => e.slug === 'escritorio').pops;
+    const [completo, ruim] = await pops();
+    expect(completo.name).toBe('Completo');
     expect(ruim.name).toBeUndefined();
-    expect(ruim.error.file).toBe('ruim.toon');
+    expect(ruim.error.file).toBe('escritorio/ruim.toon');
     expect(ruim.error.message).toBeTruthy();
 
-    writeFileSync(join(dir, 'ruim.toon'), 'ambiente: Consertado\netapas[1]:\n  - titulo: A\n    objetivo: o\n    atividades[1]:\n      - x\n');
-    const r2 = await request(app).get('/api/environments');
-    expect(r2.body.find((e: any) => e.slug === 'ruim').name).toBe('Consertado');
+    writeFileSync(join(c.popsDir, 'escritorio', 'ruim.toon'), 'nome: Consertado\netapas[1]:\n  - titulo: A\n    objetivo: o\n    atividades[1]:\n      - x\n');
+    expect((await pops())[1].name).toBe('Consertado');
   });
 });
 

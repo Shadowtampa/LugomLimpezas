@@ -11,7 +11,7 @@ Um lugar da casa que tem uma limpeza própria, por exemplo Escritório ou Banhei
 _Avoid_: cômodo, sala, local, área
 
 **POP**:
-O procedimento de limpeza de um Ambiente: as Etapas, em ordem, e as Atividades de cada uma. Ele é a sugestão do que fazer e pode ser editado a qualquer momento.
+Um procedimento de limpeza de um Ambiente: as Etapas, em ordem, e as Atividades de cada uma. Um Ambiente pode ter vários (ex.: Completo e Rápido); cada Limpeza usa um. Ele é a sugestão do que fazer e pode ser editado a qualquer momento.
 _Avoid_: protocolo, checklist, template, roteiro
 
 **Etapa**:
@@ -40,11 +40,11 @@ O Tempo ativo gasto numa Atividade, contado desde a marcação anterior que aind
 _Avoid_: lap, parcial, tempo da tarefa
 
 **Recorde**:
-A menor Volta já registrada para uma Atividade de um Ambiente.
+A menor Volta já registrada para uma Atividade de um POP.
 _Avoid_: melhor tempo, PB
 
 **Limpeza mais rápida**:
-A Limpeza Concluída de um Ambiente com o menor Tempo ativo total.
+A Limpeza Concluída de um POP com o menor Tempo ativo total.
 _Avoid_: recorde geral
 
 **Em andamento**:

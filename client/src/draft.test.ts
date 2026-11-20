@@ -8,7 +8,7 @@ const pop: PopView = { ambiente: 'Sala', etapas: [{ titulo: 'E', objetivo: 'o', 
 
 // Rascunho montado segundo a segundo, como o usuário usaria.
 function run(steps: [number, Parameters<typeof addEvent>[1], string?][]) {
-  let d = startDraft('sala', T0);
+  let d = startDraft('sala', 'completo', T0);
   for (const [sec, tipo, task] of steps) d = addEvent(d, tipo, task, T0 + s(sec));
   return d;
 }
@@ -56,7 +56,7 @@ describe('tela e pendências', () => {
 
 describe('eventos', () => {
   it('o horário nunca anda para trás', () => {
-    const d = addEvent(startDraft('sala', T0 + s(100)), 'pausa', undefined, T0);
+    const d = addEvent(startDraft('sala', 'completo', T0 + s(100)), 'pausa', undefined, T0);
     expect(d.eventos[1].em).toBe(d.eventos[0].em);
   });
 

@@ -1,12 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
-import { atomicWrite, parseToon, PopError, SLUG_RE, type PopProblem } from './pops.ts';
+import { atomicWrite, parseToon, PopError, type PopProblem } from './pops.ts';
 
 // Chaves sem acento, na ordem de Date.getDay() (domingo = 0).
 export const DAYS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'] as const;
 export type Agenda = Record<(typeof DAYS)[number], string[]>;
 
-const Slugs = z.array(z.string().regex(SLUG_RE, 'use o nome do arquivo do ambiente, sem .toon')).default([]);
+// "quarto" (qualquer POP) ou "quarto/rapido" (um POP do ambiente).
+const ENTRY_RE = /^[a-z0-9-]+(\/[a-z0-9-]+)?$/;
+const Slugs = z.array(z.string().regex(ENTRY_RE, 'use o ambiente (ex.: quarto) ou ambiente/pop (ex.: quarto/rapido)')).default([]);
 // strict: uma chave errada (ex.: "terça") é erro, não um dia silenciosamente vazio.
 const AgendaSchema = z.object(Object.fromEntries(DAYS.map((d) => [d, Slugs])) as Record<(typeof DAYS)[number], typeof Slugs>).strict();
 

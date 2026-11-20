@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import request from 'supertest';
 import { createApp } from './app.ts';
 import { openDb } from './db.ts';
+import { migratePopsDir } from './environments.ts';
 
 const seeds = resolve(import.meta.dirname, '../../pops');
 const T0 = Date.parse('2026-01-01T12:00:00Z');
@@ -14,6 +15,7 @@ export function makeApp() {
   const popsDir = mkdtempSync(join(tmpdir(), 'pops-'));
   for (const f of ['escritorio.toon', 'banheiro-escritorio.toon']) copyFileSync(join(seeds, f), join(popsDir, f));
   const db = openDb(':memory:');
+  migratePopsDir(db, popsDir);
   const clock = { t: T0 };
   const agendaFile = join(mkdtempSync(join(tmpdir(), 'agenda-')), 'agenda.toon');
   return { app: createApp({ popsDir, db, agendaFile, now: () => clock.t }), db, popsDir, agendaFile, clock };
@@ -23,12 +25,12 @@ export type Ctx = ReturnType<typeof makeApp>;
 // Evento do rascunho no segundo `sec` (a partir de um relógio fixo).
 export const ev = (sec: number, tipo: string, atividade?: string) => ({ tipo, atividade, em: new Date(T0 + sec * 1000).toISOString() });
 
-export const tasksOf = async (c: Ctx, slug = 'escritorio'): Promise<string[]> =>
-  (await request(c.app).get(`/api/environments/${slug}/pop`)).body.etapas.flatMap((e: any) => e.atividades.map((a: any) => a.texto));
+export const tasksOf = async (c: Ctx, slug = 'escritorio', pop = 'completo'): Promise<string[]> =>
+  (await request(c.app).get(`/api/environments/${slug}/pops/${pop}`)).body.etapas.flatMap((e: any) => e.atividades.map((a: any) => a.texto));
 
 // O envio único: POST /api/cleanings com o rascunho inteiro.
-export const submit = (c: Ctx, eventos: object[], opts: { slug?: string; status?: string; id?: string } = {}) =>
-  request(c.app).post('/api/cleanings').send({ id: opts.id ?? randomUUID(), ambiente: opts.slug ?? 'escritorio', status: opts.status ?? 'concluida', eventos });
+export const submit = (c: Ctx, eventos: object[], opts: { slug?: string; pop?: string; status?: string; id?: string } = {}) =>
+  request(c.app).post('/api/cleanings').send({ id: opts.id ?? randomUUID(), ambiente: opts.slug ?? 'escritorio', pop: opts.pop, status: opts.status ?? 'concluida', eventos });
 
 // Limpeza concluída: começa em 0 e marca todas as atividades no segundo `sec` (a primeira volta dura `sec`, as outras 0).
 export async function finish(c: Ctx, sec: number, slug = 'escritorio') {

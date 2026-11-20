@@ -2,6 +2,7 @@ import { cpSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { createApp } from './app.ts';
 import { openDb } from './db.ts';
+import { migratePopsDir } from './environments.ts';
 
 const root = resolve(import.meta.dirname, '../..');
 try { process.loadEnvFile(resolve(root, '.env')); } catch { /* .env é opcional */ }
@@ -23,5 +24,7 @@ if (!existsSync(agendaFile) && existsSync(resolve(root, 'agenda.toon'))) {
   cpSync(resolve(root, 'agenda.toon'), agendaFile);
 }
 
-createApp({ popsDir, db: openDb(dbPath), agendaFile, clientDir: resolve(root, 'client/dist') })
+const db = openDb(dbPath);
+migratePopsDir(db, popsDir);
+createApp({ popsDir, db, agendaFile, clientDir: resolve(root, 'client/dist') })
   .listen(port, () => console.log(`Lugom Limpezas em http://localhost:${port}`));

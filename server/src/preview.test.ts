@@ -9,14 +9,14 @@ const toon = 'ambiente: Sala\netapas[1]:\n  - titulo: A\n    objetivo: b.\n    a
 describe('pré-visualização do POP', () => {
   it('devolve o POP salvo sem criar limpeza nem mexer no arquivo', async () => {
     const c = makeApp();
-    const before = readFileSync(join(c.popsDir, 'escritorio.toon'), 'utf8');
-    const r = await request(c.app).get('/api/environments/escritorio/pop');
+    const before = readFileSync(join(c.popsDir, 'escritorio', 'completo.toon'), 'utf8');
+    const r = await request(c.app).get('/api/environments/escritorio/pops/completo');
     expect(r.status).toBe(200);
     expect(r.body.ambiente).toBe('Escritório');
     expect(r.body.etapas[0].atividades[0].texto).toBeTruthy();
     expect(c.db.prepare('SELECT COUNT(*) AS n FROM cleanings').get()).toEqual({ n: 0 });
-    expect(readFileSync(join(c.popsDir, 'escritorio.toon'), 'utf8')).toBe(before);
-    expect((await request(c.app).get('/api/environments/nao-existe/pop')).status).toBe(404);
+    expect(readFileSync(join(c.popsDir, 'escritorio', 'completo.toon'), 'utf8')).toBe(before);
+    expect((await request(c.app).get('/api/environments/nao-existe/pops/completo')).status).toBe(404);
   });
 
   it('pré-visualiza um texto ainda não salvo (também dentro de cerca) e nada é gravado', async () => {
@@ -26,7 +26,7 @@ describe('pré-visualização do POP', () => {
       expect(r.status).toBe(200);
       expect(r.body.etapas[0].atividades).toEqual([{ texto: 'Fazer.' }, { texto: 'Refazer.', descricao: 'Com calma.' }]);
     }
-    expect(readFileSync(join(c.popsDir, 'escritorio.toon'), 'utf8')).not.toContain('Sala');
+    expect(readFileSync(join(c.popsDir, 'escritorio', 'completo.toon'), 'utf8')).not.toContain('Sala');
   });
 
   it('texto inválido devolve 400 com o problema', async () => {

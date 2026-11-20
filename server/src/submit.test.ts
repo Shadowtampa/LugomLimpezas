@@ -19,8 +19,8 @@ describe('envio único da limpeza (POST /api/cleanings)', () => {
     expect(r.body.progress).toEqual({ done: 31, total: 31 });
     expect(lap(r.body, A)).toBe(s(100));
     const env = (await request(c.app).get('/api/environments/escritorio')).body;
-    expect(env.fastestMs).toBe(s(100));
-    expect(env.history[0]).toMatchObject({ status: 'completed', totalMs: s(100), done: 31, total: 31 });
+    expect(env.pops[0]).toMatchObject({ slug: 'completo', fastestMs: s(100) });
+    expect(env.history[0]).toMatchObject({ pop: 'completo', popName: 'Completo', status: 'completed', totalMs: s(100), done: 31, total: 31 });
   });
 
   it('a volta desconta pausas e conta desde a marcação mais recente, inclusive fora de ordem', async () => {
@@ -82,7 +82,7 @@ describe('envio único da limpeza (POST /api/cleanings)', () => {
     const c = makeApp();
     const r = await abandoned(c, 40, [[25, A]]);
     expect(r.body).toMatchObject({ status: 'abandoned', activeMs: s(40) });
-    expect((await request(c.app).get('/api/environments/escritorio/records')).body).toEqual({ [A]: s(25) });
+    expect((await request(c.app).get('/api/environments/escritorio/pops/completo/records')).body).toEqual({ [A]: s(25) });
   });
 
   it('ignora atividade que não existe mais no POP', async () => {
@@ -95,7 +95,7 @@ describe('envio único da limpeza (POST /api/cleanings)', () => {
   it('POP editado no meio: concluída exige todas as atividades do POP atual', async () => {
     const c = makeApp();
     const tasks = await tasksOf(c);
-    const file = join(c.popsDir, 'escritorio.toon');
+    const file = join(c.popsDir, 'escritorio', 'completo.toon');
     writeFileSync(file, readFileSync(file, 'utf8').replace(A, 'Texto novo da atividade.'));
     expect((await submit(c, [ev(0, 'inicio'), ...tasks.map((t) => ev(9, 'feito', t))])).body.status).toBe('abandoned');
     expect((await submit(c, [ev(0, 'inicio'), ...tasks.slice(1).map((t) => ev(9, 'feito', t)), ev(9, 'feito', 'Texto novo da atividade.')])).body.status).toBe('completed');
@@ -126,9 +126,9 @@ describe('recordes e migração', () => {
     const c = makeApp();
     await abandoned(c, 60, [[30, A]]);
     await abandoned(c, 60, [[20, A], [50, B]]);
-    expect((await request(c.app).get('/api/environments/escritorio/records')).body).toEqual({ [A]: s(20), [B]: s(30) });
-    expect((await request(c.app).get('/api/environments/banheiro-escritorio/records')).body).toEqual({});
-    expect((await request(c.app).get('/api/environments/nada/records')).status).toBe(404);
+    expect((await request(c.app).get('/api/environments/escritorio/pops/completo/records')).body).toEqual({ [A]: s(20), [B]: s(30) });
+    expect((await request(c.app).get('/api/environments/banheiro-escritorio/pops/completo/records')).body).toEqual({});
+    expect((await request(c.app).get('/api/environments/nada/pops/completo/records')).status).toBe(404);
   });
 
   it('a migração 004 abandona as limpezas que estavam em andamento no servidor', () => {

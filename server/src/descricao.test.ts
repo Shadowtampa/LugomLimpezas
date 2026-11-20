@@ -26,7 +26,7 @@ describe('descrição da atividade', () => {
 
   it('a descrição chega na visualização da limpeza', async () => {
     const c = makeApp();
-    const file = join(c.popsDir, 'escritorio.toon');
+    const file = join(c.popsDir, 'escritorio', 'completo.toon');
     writeFileSync(file, readFileSync(file, 'utf8').replace(`      - ${A}`, `      - texto: ${A}\n        descricao: Leve uma bandeja.`));
     const v = (await abandoned(c, 5)).body;
     expect(v.etapas[0].atividades[0]).toMatchObject({ text: A, descricao: 'Leve uma bandeja.' });
@@ -36,8 +36,8 @@ describe('descrição da atividade', () => {
   it('editar só a descrição não zera o recorde (a identidade é o texto)', async () => {
     const c = makeApp();
     await abandoned(c, 30, [[30, A]]);
-    await request(c.app).put('/api/environments/escritorio/pop').send({
-      toon: readFileSync(join(c.popsDir, 'escritorio.toon'), 'utf8').replace(`      - ${A}`, `      - texto: ${A}\n        descricao: Nova descrição.`),
+    await request(c.app).put('/api/environments/escritorio/pops/completo').send({
+      toon: readFileSync(join(c.popsDir, 'escritorio', 'completo.toon'), 'utf8').replace(`      - ${A}`, `      - texto: ${A}\n        descricao: Nova descrição.`),
     });
     const v = (await abandoned(c, 40, [[40, A]])).body;
     expect(v.etapas[0].atividades[0]).toMatchObject({ descricao: 'Nova descrição.', recordMs: 30_000 });

@@ -48,10 +48,19 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
 
 ### R1. Ambientes e POPs
 
-- Cada arquivo `<slug>.toon` na pasta de POPs (`POPS_DIR`, seção 11) é um ambiente. O nome do arquivo é o
-  endereço (`/escritorio`) e o campo `ambiente` é o nome exibido.
-- Criar um arquivo, à mão ou importando pela interface (R9), cria um
-  ambiente.
+- Um ambiente (slug e nome) fica na tabela `environments` e tem um ou mais POPs
+  (#39). Cada POP é o arquivo `<ambiente>/<pop>.toon` na pasta de POPs
+  (`POPS_DIR`, seção 11); o campo `nome` é o nome do POP (ex.: Completo, Rápido).
+- O ambiente é criado e renomeado pela interface (o slug não muda). O POP é
+  criado (modelo mínimo aberto no editor), importado (R9) ou editado na tela do
+  ambiente. Ao iniciar uma limpeza o usuário escolhe o POP; com um só, ele já vem
+  escolhido. A limpeza grava o POP usado (`cleanings.pop`).
+- Recordes por atividade e a limpeza mais rápida são por POP. As notas (R13)
+  são do ambiente. O prompt da IA (R11) usa o POP escolhido, os comentários das
+  limpezas desse POP e as notas do ambiente.
+- Migração: na inicialização, cada arquivo antigo `<slug>.toon` vira o ambiente
+  `<slug>` com o POP `completo` (o arquivo original fica como
+  `<slug>.toon.migrado`), e as limpezas antigas ficam com `pop = 'completo'`.
 - Os arquivos são lidos a cada requisição, para que uma edição apareça ao
   recarregar a página, sem reiniciar o serviço.
 - Depois de decodificar, o conteúdo é validado com Zod. Se um arquivo for
@@ -160,11 +169,10 @@ O navegador nunca acessa o SQLite nem os arquivos TOON diretamente.
   **Salvar**. Antes de gravar, o sistema decodifica e valida o texto (R1). Se
   houver erro, mostra o problema (com a linha, quando houver) e não grava
   nada. O texto é gravado exatamente como foi digitado, sem reformatar.
-- **Importar:** envio de um arquivo `.toon` pela tela inicial. O nome do
-  arquivo vira o slug, que só pode ter letras minúsculas, números e hífen.
-  Se o ambiente já existir, a tela pergunta *"Substituir o POP de
-  <ambiente>?"*; sem a confirmação explícita no corpo da requisição, o
-  backend responde `409`.
+- **Importar:** envio de um arquivo `.toon` pela tela do ambiente. O nome do
+  arquivo vira o slug do POP, que só pode ter letras minúsculas, números e hífen.
+  Se o POP já existir, a tela pergunta *"Substituir o POP <nome>?"*; sem a
+  confirmação explícita no corpo da requisição, o backend responde `409`.
 - **Exportar:** o botão **Baixar .toon** entrega o arquivo exatamente como
   ele está gravado.
 - A gravação é atômica (escreve num arquivo temporário e renomeia), para que
@@ -394,24 +402,27 @@ Prefixo `/api`. Toda entrada é validada com Zod.
 
 | Método | Rota                                   | Finalidade                                                                 |
 | ------ | -------------------------------------- | -------------------------------------------------------------------------- |
-| GET    | `/environments`                        | Lista os ambientes (slug, nome ou erro do arquivo)                         |
-| GET    | `/environments/:slug`                  | Nome, total de atividades, limpeza mais rápida, histórico e notas          |
+| GET    | `/environments`                        | Lista os ambientes (slug, nome) com os POPs de cada um (slug, nome ou erro do arquivo) |
+| POST   | `/environments`                        | Corpo `{ "name" }`; cria o ambiente (slug a partir do nome). Já existe: `409` |
+| GET    | `/environments/:slug`                  | Nome, POPs (total de atividades e limpeza mais rápida de cada um), histórico e notas |
+| PUT    | `/environments/:slug`                  | Corpo `{ "name" }`; renomeia o ambiente                                     |
+| POST   | `/environments/:slug/pops`             | Corpo `{ "name" }`; cria um POP com um modelo mínimo. Já existe: `409`     |
 | POST   | `/cleanings`                           | O envio único da limpeza (R14). `201` ao gravar; `200` se o mesmo `id` já foi gravado |
-| GET    | `/environments/:slug/records`          | Menor volta de cada atividade no ambiente, `{ "<texto>": ms }`              |
+| GET    | `/environments/:slug/pops/:pop/records` | Menor volta de cada atividade no POP, `{ "<texto>": ms }`                  |
 | GET    | `/cleanings/:id`                       | Estado, tarefas marcadas com voltas e recorde de cada atividade            |
 | DELETE | `/cleanings/:id`                       | Exclui uma limpeza abandonada (R3) e suas voltas. Outro status: `409`; `204` ao excluir |
 | PUT    | `/cleanings/:id/review`                | Corpo `{ "score": 1-10, "improvements": "<texto>" }`; grava a auto-avaliação (R10). Nota inválida: `400`; limpeza não concluída: `409` |
-| GET    | `/environments/:slug/pop.toon`         | Exporta o arquivo TOON como download                                       |
+| GET    | `/environments/:slug/pops/:pop/pop.toon` | Exporta o arquivo TOON como download                                       |
 | GET    | `/dashboard`                           | Agenda por dia da semana e as últimas 50 limpezas de todos os ambientes (seção 15) |
 | GET    | `/agenda.toon`                         | Exporta o arquivo da agenda                                                |
 | PUT    | `/agenda`                              | Corpo `{ "toon": "<texto>" }`; valida e grava a agenda. Erro de validação: `400` |
-| GET    | `/environments/:slug/pop`              | O POP atual decodificado, para a pré-visualização (R12)                    |
+| GET    | `/environments/:slug/pops/:pop`        | O POP atual decodificado, para a pré-visualização (R12)                    |
 | POST   | `/pop-preview`                         | Corpo `{ "toon": "<texto>" }`; devolve o POP decodificado sem gravar. Inválido: `400` |
 | POST   | `/environments/:slug/notes`            | Corpo `{ "text": "<1 a 1000 caracteres>" }`; adiciona uma nota (R13). Inválido: `400` |
 | DELETE | `/environments/:slug/notes/:id`        | Exclui a nota do ambiente (`204`; `404` se não existe)                      |
-| GET    | `/environments/:slug/prompt-ia`        | Texto do prompt para melhorar o POP com IA (R11). Sem comentários: `409`   |
-| PUT    | `/environments/:slug/pop`              | Corpo `{ "toon": "<texto>" }`; valida e grava (R9). Erro de validação: `400` |
-| POST   | `/environments/import`                 | Corpo `{ "filename": "x.toon", "toon": "<texto>", "replace": true }`; cria ou substitui. Ambiente existente sem `replace`: `409` |
+| GET    | `/environments/:slug/pops/:pop/prompt-ia` | Texto do prompt para melhorar o POP com IA (R11). Sem comentários: `409`   |
+| PUT    | `/environments/:slug/pops/:pop`        | Corpo `{ "toon": "<texto>" }`; valida e grava (R9). Erro de validação: `400` |
+| POST   | `/environments/:slug/pops/import`      | Corpo `{ "filename": "x.toon", "toon": "<texto>", "replace": true }`; cria ou substitui o POP. POP existente sem `replace`: `409` |
 
 O `POST /cleanings` recebe o rascunho inteiro (R14), valida com Zod e grava a
 limpeza, as voltas e o resultado numa transação:

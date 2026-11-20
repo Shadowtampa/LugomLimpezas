@@ -24,7 +24,7 @@ describe('histórico do ambiente', () => {
   it('o progresso usa o POP atual (texto editado ou removido não conta)', async () => {
     const c = makeApp();
     await abandoned(c, 5, [[5, A]]);
-    const file = join(c.popsDir, 'escritorio.toon');
+    const file = join(c.popsDir, 'escritorio', 'completo.toon');
     writeFileSync(file, readFileSync(file, 'utf8').replace(A, 'Texto novo da atividade.'));
     const h = (await request(c.app).get('/api/environments/escritorio')).body.history;
     expect(h[0]).toMatchObject({ done: 0, total: 31 });

@@ -36,7 +36,9 @@ describe('agenda: validação', () => {
   });
   it('chave errada (com acento) e slug inválido são recusados', () => {
     expect(() => parseAgenda('terça[1]: escritorio\n')).toThrow();
-    expect(() => parseAgenda('terca[1]: Escritório\n')).toThrow(/sem \.toon/);
+    expect(() => parseAgenda('terca[1]: Escritório\n')).toThrow(/ambiente\/pop/);
+    expect(parseAgenda('terca[2]: escritorio,quarto/rapido\n').terca).toEqual(['escritorio', 'quarto/rapido']);
+    expect(() => parseAgenda('terca[1]: a/b/c\n')).toThrow();
     expect(() => parseAgenda('terca[1]: ../x\n')).toThrow();
   });
 });

@@ -11,13 +11,13 @@ describe('fim da limpeza', () => {
     expect((await finish(c, 100)).body.result.newRecord).toBe(true);
     expect((await finish(c, 80)).body.result).toMatchObject({ newRecord: true, diffMs: -s(20), fastestOtherMs: s(100) });
     expect((await finish(c, 130)).body.result).toMatchObject({ newRecord: false, diffMs: s(50), fastestOtherMs: s(80) });
-    expect((await request(c.app).get('/api/environments/escritorio')).body.fastestMs).toBe(s(80));
+    expect((await request(c.app).get('/api/environments/escritorio')).body.pops[0].fastestMs).toBe(s(80));
   });
 
   it('abandonada não conta como a mais rápida', async () => {
     const c = makeApp();
     await abandoned(c, 5);
-    expect((await request(c.app).get('/api/environments/escritorio')).body.fastestMs).toBeNull();
+    expect((await request(c.app).get('/api/environments/escritorio')).body.pops[0].fastestMs).toBeNull();
   });
 
   it('lista as atividades em que o recorde foi batido', async () => {

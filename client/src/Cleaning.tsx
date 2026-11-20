@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type CleaningView, type PopView } from './api.ts';
-import { addEvent, clearDraft, draftView, findDraft, pendingStatus, saveDraft, type Draft } from './draft.ts';
+import { addEvent, clearDraft, draftPop, draftView, findDraft, pendingStatus, saveDraft, type Draft } from './draft.ts';
 import { deltaClass, formatDelta, formatDuration } from './format.ts';
 import { currentAndNext, currentEtapaIndex, previewView, togglePreview } from './progress.ts';
 
@@ -57,7 +57,8 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
     if (!id) return;
     const d = findDraft(id);
     if (!d) { api<CleaningView>(`/cleanings/${id}`).then(apply, (e: Error) => setError(e.message)); return; }
-    Promise.all([api<PopView>(`/environments/${d.ambiente}/pop`), api<Record<string, number>>(`/environments/${d.ambiente}/records`)]).then(([p, records]) => {
+    const base = `/environments/${d.ambiente}/pops/${draftPop(d)}`;
+    Promise.all([api<PopView>(base), api<Record<string, number>>(`${base}/records`)]).then(([p, records]) => {
       setCtx({ pop: p, records });
       setDraft(d);
       apply(draftView(p, records, d, Date.now()));
@@ -80,7 +81,7 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
     setBusy(true);
     setError('');
     try {
-      apply(await api<CleaningView>('/cleanings', { method: 'POST', body: { id: d.id, ambiente: d.ambiente, status, eventos: d.eventos } }));
+      apply(await api<CleaningView>('/cleanings', { method: 'POST', body: { id: d.id, ambiente: d.ambiente, pop: draftPop(d), status, eventos: d.eventos } }));
       clearDraft(d.ambiente);
       setDraft(null);
     } catch (e) {
@@ -123,7 +124,8 @@ export function Cleaning({ id, pop }: { id?: string; pop?: PopView }) {
   return (
     <>
       {!pop && <p><a href={`#/a/${c.environment}`}>← {c.environmentName}</a></p>}
-      {pop ? <h2>{c.environmentName}</h2> : <h1>{c.environmentName}</h1>}
+      {pop ? <h2>{c.environmentName || c.popName}</h2> : <h1>{c.environmentName}</h1>}
+      {c.popName && (c.environmentName || !pop) && <p className="muted pop-nome">POP {c.popName}</p>}
 
       {/* Desktop: tempo/etapas numa coluna e os cards ao lado (só na limpeza, não na prévia); no celular os wrappers não mudam nada. */}
       <div className={pop ? undefined : "foco"}>

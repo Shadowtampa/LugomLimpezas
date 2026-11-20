@@ -16,13 +16,13 @@ describe('melhorar com IA', () => {
     const c = makeApp();
     await completedAndReviewed(c, 6, 'Falta passar pano nos rodapés.');
     await completedAndReviewed(c, 9, 'Linha 1\nLinha "2" com aspas');
-    const r = await request(c.app).get('/api/environments/banheiro-escritorio/prompt-ia');
+    const r = await request(c.app).get('/api/environments/banheiro-escritorio/pops/completo/prompt-ia');
     expect(r.status).toBe(200);
     expect(r.type).toBe('text/plain');
     expect(r.text).toContain('NÃO altere nada ainda');
     expect(r.text).toContain('SEM os comentários');
     expect(r.text).toContain('9/10');
-    expect(r.text).toContain(readFileSync(join(c.popsDir, 'banheiro-escritorio.toon'), 'utf8').trimEnd());
+    expect(r.text).toContain(readFileSync(join(c.popsDir, 'banheiro-escritorio', 'completo.toon'), 'utf8').trimEnd());
     const block = /# Meus comentários[^\n]*\n```toon\n([\s\S]*?)\n```/.exec(r.text)![1];
     const { comentarios } = decode(block) as { comentarios: { nota: number; texto: string }[] };
     expect(comentarios.map((x) => x.nota)).toEqual([9, 6]);
@@ -31,15 +31,15 @@ describe('melhorar com IA', () => {
 
   it('409 sem comentários e 404 para ambiente inexistente', async () => {
     const c = makeApp();
-    expect((await request(c.app).get('/api/environments/escritorio/prompt-ia')).status).toBe(409);
-    expect((await request(c.app).get('/api/environments/nao-existe/prompt-ia')).status).toBe(404);
+    expect((await request(c.app).get('/api/environments/escritorio/pops/completo/prompt-ia')).status).toBe(409);
+    expect((await request(c.app).get('/api/environments/nao-existe/pops/completo/prompt-ia')).status).toBe(404);
   });
 
   it('salvar o POP aceita o TOON dentro de uma cerca de código e grava sem a cerca', async () => {
     const c = makeApp();
     const toon = 'ambiente: Escritório\netapas[1]:\n  - titulo: A\n    objetivo: b.\n    atividades[1]:\n      - Fazer.\n';
-    const r = await request(c.app).put('/api/environments/escritorio/pop').send({ toon: '```toon\n' + toon + '```\n' });
+    const r = await request(c.app).put('/api/environments/escritorio/pops/completo').send({ toon: '```toon\n' + toon + '```\n' });
     expect(r.status).toBe(200);
-    expect(readFileSync(join(c.popsDir, 'escritorio.toon'), 'utf8')).toBe(toon);
+    expect(readFileSync(join(c.popsDir, 'escritorio', 'completo.toon'), 'utf8')).toBe(toon);
   });
 });

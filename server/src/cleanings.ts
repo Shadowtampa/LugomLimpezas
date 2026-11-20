@@ -2,8 +2,9 @@ import type { DatabaseSync } from 'node:sqlite';
 import { z } from 'zod';
 import { transaction } from './db.ts';
 import { HttpError } from './http.ts';
+import { envName, FIRST_POP } from './environments.ts';
 import { listNotes } from './notes.ts';
-import { PopError, readPop, SLUG_RE, type Pop } from './pops.ts';
+import { listPops, PopError, popName, readPop, type Pop } from './pops.ts';
 
 // `now` existe para os testes controlarem o relógio das notas.
 export type Deps = { db: DatabaseSync; popsDir: string; now?: () => number };
@@ -11,6 +12,7 @@ export type Deps = { db: DatabaseSync; popsDir: string; now?: () => number };
 type CleaningRow = {
   id: string;
   environment: string;
+  pop: string;
   status: string;
   started_at: string;
   ended_at: string | null;
@@ -21,12 +23,12 @@ type CleaningRow = {
 
 const iso = (ms: number) => new Date(ms).toISOString();
 
-export function loadPop(d: Deps, slug: string): Pop {
-  if (!SLUG_RE.test(slug)) throw new HttpError(404, 'ambiente não encontrado');
-  try { return readPop(d.popsDir, slug); }
+export function loadPop(d: Deps, env: string, pop: string): Pop {
+  envName(d, env);
+  try { return readPop(d.popsDir, env, pop); }
   catch (e) {
     if (!(e instanceof PopError)) throw e;
-    if (e.problem.message === 'arquivo não encontrado') throw new HttpError(404, 'ambiente não encontrado');
+    if (e.problem.message === 'arquivo não encontrado') throw new HttpError(404, 'POP não encontrado');
     throw new HttpError(422, `POP inválido: ${e.message}`, { problem: e.problem });
   }
 }
@@ -35,61 +37,75 @@ const allTasks = (pop: Pop) => pop.etapas.flatMap((e) => e.atividades.map((a) =>
 
 function getRow(d: Deps, id: string): CleaningRow {
   const row = d.db
-    .prepare('SELECT id, environment, status, started_at, ended_at, total_ms, score, improvements FROM cleanings WHERE id = ?')
+    .prepare('SELECT id, environment, pop, status, started_at, ended_at, total_ms, score, improvements FROM cleanings WHERE id = ?')
     .get(id) as CleaningRow | undefined;
   if (!row) throw new HttpError(404, 'limpeza não encontrada');
   return row;
 }
 
+// POPs do ambiente (com o total de atividades e a limpeza mais rápida de cada um), histórico e notas.
 export function environmentView(d: Deps, slug: string) {
-  const pop = loadPop(d, slug);
-  return { slug, name: pop.ambiente, total: allTasks(pop).length, fastestMs: fastestMs(d, slug), history: history(d, slug, pop), notes: listNotes(d, slug) };
+  const name = envName(d, slug);
+  const pops = listPops(d.popsDir, slug).map((p) => {
+    if (p.error) return p;
+    return { ...p, total: allTasks(readPop(d.popsDir, slug, p.slug)).length, fastestMs: fastestMs(d, slug, p.slug) };
+  });
+  return { slug, name, pops, history: history(d, slug), notes: listNotes(d, slug) };
 }
 
-// R8: da mais recente para a mais antiga; progresso calculado contra o POP atual.
-function history(d: Deps, slug: string, pop: Pop) {
-  const inPop = new Set(allTasks(pop));
+// R8: da mais recente para a mais antiga; progresso calculado contra o POP atual que cada limpeza usou.
+function history(d: Deps, slug: string) {
+  const tasksOf = new Map<string, { tasks: Set<string>; name: string }>();
+  const popOf = (pop: string) => {
+    if (!tasksOf.has(pop)) {
+      try { const p = readPop(d.popsDir, slug, pop); tasksOf.set(pop, { tasks: new Set(allTasks(p)), name: popName(p, pop) }); }
+      catch { tasksOf.set(pop, { tasks: new Set(), name: pop }); } // POP removido ou inválido: progresso 0/0
+    }
+    return tasksOf.get(pop)!;
+  };
   const marked = new Map<string, number>();
-  const rows = d.db.prepare("SELECT cleaning_id, task FROM cleaning_tasks WHERE cleaning_id IN (SELECT id FROM cleanings WHERE environment = ?)").all(slug) as { cleaning_id: string; task: string }[];
-  for (const r of rows) if (inPop.has(r.task)) marked.set(r.cleaning_id, (marked.get(r.cleaning_id) ?? 0) + 1);
-  const cleanings = d.db.prepare("SELECT id, environment, status, started_at, ended_at, total_ms, score, improvements FROM cleanings WHERE environment = ? ORDER BY started_at DESC, rowid DESC").all(slug) as CleaningRow[];
+  const rows = d.db.prepare("SELECT ct.cleaning_id, ct.task, c.pop FROM cleaning_tasks ct JOIN cleanings c ON c.id = ct.cleaning_id WHERE c.environment = ?").all(slug) as { cleaning_id: string; task: string; pop: string }[];
+  for (const r of rows) if (popOf(r.pop).tasks.has(r.task)) marked.set(r.cleaning_id, (marked.get(r.cleaning_id) ?? 0) + 1);
+  const cleanings = d.db.prepare("SELECT id, environment, pop, status, started_at, ended_at, total_ms, score, improvements FROM cleanings WHERE environment = ? ORDER BY started_at DESC, rowid DESC").all(slug) as CleaningRow[];
   return cleanings.map((c) => ({
     id: c.id,
+    pop: c.pop,
+    popName: popOf(c.pop).name,
     startedAt: c.started_at,
     status: c.status,
     score: c.score,
     totalMs: c.total_ms ?? 0,
     done: marked.get(c.id) ?? 0,
-    total: inPop.size,
+    total: popOf(c.pop).tasks.size,
   }));
 }
 
-// Limpeza mais rápida: menor tempo total entre as concluídas, opcionalmente sem contar uma delas.
-function fastestMs(d: Deps, slug: string, exceptId = ''): number | null {
+// Limpeza mais rápida de um POP: menor tempo total entre as concluídas, opcionalmente sem contar uma delas.
+function fastestMs(d: Deps, env: string, pop: string, exceptId = ''): number | null {
   const r = d.db
-    .prepare("SELECT MIN(total_ms) AS m FROM cleanings WHERE environment = ? AND status = 'completed' AND id != ?")
-    .get(slug, exceptId) as { m: number | null };
+    .prepare("SELECT MIN(total_ms) AS m FROM cleanings WHERE environment = ? AND pop = ? AND status = 'completed' AND id != ?")
+    .get(env, pop, exceptId) as { m: number | null };
   return r.m;
 }
 
-// R6: recorde = menor volta daquele texto neste ambiente em OUTRAS limpezas (qualquer status).
-export function taskRecords(d: Deps, slug: string, exceptId = '') {
+// R6: recorde = menor volta daquele texto neste POP do ambiente em OUTRAS limpezas (qualquer status).
+export function taskRecords(d: Deps, env: string, pop: string, exceptId = '') {
   return new Map(
     (d.db.prepare(
       `SELECT ct.task, MIN(ct.lap_ms) AS m FROM cleaning_tasks ct JOIN cleanings c ON c.id = ct.cleaning_id
-       WHERE c.environment = ? AND ct.cleaning_id != ? GROUP BY ct.task`,
-    ).all(slug, exceptId) as { task: string; m: number }[]).map((r) => [r.task, r.m]),
+       WHERE c.environment = ? AND c.pop = ? AND ct.cleaning_id != ? GROUP BY ct.task`,
+    ).all(env, pop, exceptId) as { task: string; m: number }[]).map((r) => [r.task, r.m]),
   );
 }
 
 export function cleaningView(d: Deps, id: string) {
   const row = getRow(d, id);
-  const pop = loadPop(d, row.environment);
+  const pop = loadPop(d, row.environment, row.pop);
   const laps = new Map(
     (d.db.prepare('SELECT task, lap_ms FROM cleaning_tasks WHERE cleaning_id = ?').all(id) as { task: string; lap_ms: number }[])
       .map((r) => [r.task, r.lap_ms]),
   );
-  const records = taskRecords(d, row.environment, id);
+  const records = taskRecords(d, row.environment, row.pop, id);
   const etapas = pop.etapas.map((e) => ({
     titulo: e.titulo,
     objetivo: e.objetivo,
@@ -104,7 +120,7 @@ export function cleaningView(d: Deps, id: string) {
   const tasks = allTasks(pop);
   let result = null;
   if (row.status === 'completed' && row.total_ms !== null) {
-    const fastestOther = fastestMs(d, row.environment, id);
+    const fastestOther = fastestMs(d, row.environment, row.pop, id);
     result = {
       totalMs: row.total_ms,
       fastestOtherMs: fastestOther,
@@ -118,7 +134,9 @@ export function cleaningView(d: Deps, id: string) {
   return {
     id: row.id,
     environment: row.environment,
-    environmentName: pop.ambiente,
+    environmentName: envName(d, row.environment),
+    pop: row.pop,
+    popName: popName(pop, row.pop),
     status: row.status,
     startedAt: row.started_at,
     activeMs: row.total_ms ?? 0,
@@ -148,12 +166,13 @@ export function reviewCleaning(d: Deps, id: string, score: number, improvements:
 }
 
 // Últimas limpezas de todos os ambientes, da mais recente para a mais antiga.
-export function recentCleanings(d: Deps, names: Map<string, string>, limit = 50) {
-  const rows = d.db.prepare("SELECT id, environment, status, started_at, ended_at, total_ms FROM cleanings ORDER BY started_at DESC, rowid DESC LIMIT ?").all(limit) as CleaningRow[];
+export function recentCleanings(d: Deps, limit = 50) {
+  const rows = d.db.prepare("SELECT c.id, c.environment, c.pop, c.status, c.started_at, c.ended_at, c.total_ms, COALESCE(e.name, c.environment) AS name FROM cleanings c LEFT JOIN environments e ON e.slug = c.environment ORDER BY c.started_at DESC, c.rowid DESC LIMIT ?").all(limit) as (CleaningRow & { name: string })[];
   return rows.map((c) => ({
     id: c.id,
     environment: c.environment,
-    environmentName: names.get(c.environment) ?? c.environment,
+    environmentName: c.name,
+    pop: c.pop,
     status: c.status,
     startedAt: c.started_at,
     endedAt: c.ended_at,
@@ -169,6 +188,8 @@ const Evento = z.object({
 export const SubmitBody = z.object({
   id: z.string().regex(/^[A-Za-z0-9-]{8,64}$/),
   ambiente: z.string(),
+  // Rascunhos abertos antes de existir mais de um POP não têm o campo.
+  pop: z.string().default(FIRST_POP),
   status: z.enum(['concluida', 'abandonada']),
   eventos: z.array(Evento).min(1).max(1000),
 });
@@ -177,7 +198,7 @@ export type Submit = z.infer<typeof SubmitBody>;
 // O envio único: o navegador manda o rascunho (eventos com horário) e o servidor recalcula tempo, voltas e conclusão (R5, R7).
 // Repetir o mesmo id devolve a limpeza já gravada (created: false).
 export function submitCleaning(d: Deps, b: Submit) {
-  const pop = loadPop(d, b.ambiente);
+  const pop = loadPop(d, b.ambiente, b.pop);
   const existing = d.db.prepare('SELECT environment FROM cleanings WHERE id = ?').get(b.id) as { environment: string } | undefined;
   if (existing) {
     if (existing.environment !== b.ambiente) throw new HttpError(409, 'este id já pertence a outro ambiente');
@@ -214,8 +235,8 @@ export function submitCleaning(d: Deps, b: Submit) {
   const completed = b.status === 'concluida' && doneAt !== null;
   const total = completed ? doneAt!.ms : activeAt(end);
   transaction(d.db, () => {
-    d.db.prepare("INSERT INTO cleanings (id, environment, status, started_at, ended_at, active_ms, total_ms) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run(b.id, b.ambiente, completed ? 'completed' : 'abandoned', iso(times[0]), iso(completed ? doneAt!.at : end), total, total);
+    d.db.prepare("INSERT INTO cleanings (id, environment, pop, status, started_at, ended_at, active_ms, total_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(b.id, b.ambiente, b.pop, completed ? 'completed' : 'abandoned', iso(times[0]), iso(completed ? doneAt!.at : end), total, total);
     const insert = d.db.prepare('INSERT INTO cleaning_tasks (cleaning_id, task, marked_ms, lap_ms, marked_at) VALUES (?, ?, ?, ?, ?)');
     for (const [task, l] of laps) insert.run(b.id, task, l.markedMs, l.lapMs, iso(l.at));
   });
