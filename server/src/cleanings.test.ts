@@ -13,7 +13,7 @@ describe('limpeza gravada', () => {
     expect(v.body.progress).toEqual({ done: 0, total: 31 });
     expect(v.body.etapas[0].atividades[0]).toEqual({ text: FIRST, done: false });
     const env = await request(c.app).get('/api/environments/escritorio');
-    expect(env.body).toMatchObject({ total: 31 });
+    expect(env.body.pops).toMatchObject([{ slug: 'completo', name: 'Completo', total: 31 }]);
     expect(env.body.history.map((h: any) => h.id)).toEqual([r.body.id]);
   });
 

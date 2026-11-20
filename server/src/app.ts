@@ -8,13 +8,15 @@ import { cleaningView, deleteCleaning, environmentView, loadPop, recentCleanings
 import { addNote, deleteNote } from './notes.ts';
 import { improvementPrompt, unfence } from './improve.ts';
 import { HttpError } from './http.ts';
-import { listEnvironments, parsePop, PopError, readPopText, writePopText } from './pops.ts';
+import { createEnvironment, createPop, envName, listEnvironments, renameEnvironment } from './environments.ts';
+import { parsePop, PopError, popName, readPopText, writePopText } from './pops.ts';
 
 export type Config = Deps & { agendaFile: string; clientDir?: string };
 
 const PopBody = z.object({ toon: z.string() });
 const ImportBody = z.object({ filename: z.string(), toon: z.string(), replace: z.boolean().optional() });
 const IMPORT_NAME = /^([a-z0-9-]+).toon$/;
+const NameBody = z.object({ name: z.string() });
 const NoteBody = z.object({ text: z.string().trim().min(1).max(1000) });
 const ReviewBody = z.object({ score: z.number().int().min(1).max(10), improvements: z.string().max(2000).default('') });
 
@@ -22,18 +24,33 @@ export function createApp(cfg: Config) {
   const app = express();
   app.use(express.json({ limit: '200kb' }));
 
-  app.get('/api/environments', (_req, res) => { res.json(listEnvironments(cfg.popsDir)); });
+  app.get('/api/environments', (_req, res) => { res.json(listEnvironments(cfg)); });
+  app.post('/api/environments', (req, res) => {
+    const body = NameBody.safeParse(req.body);
+    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { name }');
+    res.status(201).json(createEnvironment(cfg, body.data.name));
+  });
   app.get('/api/environments/:slug', (req, res) => { res.json(environmentView(cfg, req.params.slug)); });
+  app.put('/api/environments/:slug', (req, res) => {
+    const body = NameBody.safeParse(req.body);
+    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { name }');
+    res.json(renameEnvironment(cfg, req.params.slug, body.data.name));
+  });
+  app.post('/api/environments/:slug/pops', (req, res) => {
+    const body = NameBody.safeParse(req.body);
+    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { name }');
+    res.status(201).json(createPop(cfg, req.params.slug, body.data.name));
+  });
   // Envio único: o navegador guarda a limpeza em andamento e manda tudo aqui ao finalizar ou abandonar.
   app.post('/api/cleanings', (req, res) => {
     const body = SubmitBody.safeParse(req.body);
-    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { id, ambiente, status, eventos[] }');
+    if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { id, ambiente, pop, status, eventos[] }');
     const { created, view } = submitCleaning(cfg, body.data);
     res.status(created ? 201 : 200).json(view);
   });
-  app.get('/api/environments/:slug/records', (req, res) => {
-    loadPop(cfg, req.params.slug);
-    res.json(Object.fromEntries(taskRecords(cfg, req.params.slug)));
+  app.get('/api/environments/:slug/pops/:pop/records', (req, res) => {
+    loadPop(cfg, req.params.slug, req.params.pop);
+    res.json(Object.fromEntries(taskRecords(cfg, req.params.slug, req.params.pop)));
   });
   app.get('/api/cleanings/:id', (req, res) => { res.json(cleaningView(cfg, req.params.id)); });
   app.delete('/api/cleanings/:id', (req, res) => { deleteCleaning(cfg, req.params.id); res.status(204).end(); });
@@ -43,13 +60,17 @@ export function createApp(cfg: Config) {
     res.json(reviewCleaning(cfg, req.params.id, body.data.score, body.data.improvements.trim()));
   });
 
-  app.get('/api/environments/:slug/pop.toon', (req, res) => {
-    const text = readPopText(cfg.popsDir, req.params.slug);
-    if (text === null) throw new HttpError(404, 'ambiente não encontrado');
-    res.attachment(`${req.params.slug}.toon`).type("text/plain; charset=utf-8").send(text);
+  app.get('/api/environments/:slug/pops/:pop/pop.toon', (req, res) => {
+    const text = readPopText(cfg.popsDir, req.params.slug, req.params.pop);
+    if (text === null) throw new HttpError(404, 'POP não encontrado');
+    res.attachment(`${req.params.pop}.toon`).type("text/plain; charset=utf-8").send(text);
   });
   // Pré-visualização (R12): o POP como a limpeza o mostra, sem criar limpeza.
-  app.get('/api/environments/:slug/pop', (req, res) => { res.json(loadPop(cfg, req.params.slug)); });
+  // `ambiente` sai com o nome atual do ambiente (do banco), que a tela da limpeza mostra no título.
+  app.get('/api/environments/:slug/pops/:pop', (req, res) => {
+    const pop = loadPop(cfg, req.params.slug, req.params.pop);
+    res.json({ ...pop, nome: popName(pop, req.params.pop), ambiente: envName(cfg, req.params.slug) });
+  });
   app.post('/api/pop-preview', (req, res) => {
     const body = PopBody.safeParse(req.body);
     if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { toon }');
@@ -65,15 +86,15 @@ export function createApp(cfg: Config) {
     res.status(201).json(addNote(cfg, req.params.slug, body.data.text));
   });
   app.delete('/api/environments/:slug/notes/:id', (req, res) => { deleteNote(cfg, req.params.slug, req.params.id); res.status(204).end(); });
-  app.get('/api/environments/:slug/prompt-ia', (req, res) => {
-    res.type('text/plain; charset=utf-8').send(improvementPrompt(cfg, req.params.slug));
+  app.get('/api/environments/:slug/pops/:pop/prompt-ia', (req, res) => {
+    res.type('text/plain; charset=utf-8').send(improvementPrompt(cfg, req.params.slug, req.params.pop));
   });
-  app.put('/api/environments/:slug/pop', (req, res) => {
-    if (readPopText(cfg.popsDir, req.params.slug) === null) throw new HttpError(404, 'ambiente não encontrado');
+  app.put('/api/environments/:slug/pops/:pop', (req, res) => {
+    if (readPopText(cfg.popsDir, req.params.slug, req.params.pop) === null) throw new HttpError(404, 'POP não encontrado');
     const body = PopBody.safeParse(req.body);
     if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { toon }');
     try {
-      writePopText(cfg.popsDir, req.params.slug, unfence(body.data.toon));
+      writePopText(cfg.popsDir, req.params.slug, req.params.pop, unfence(body.data.toon));
     } catch (e) {
       if (e instanceof PopError) throw new HttpError(400, e.message, { problem: e.problem });
       throw e;
@@ -81,11 +102,14 @@ export function createApp(cfg: Config) {
     res.json({ ok: true });
   });
 
-  app.post('/api/environments/import', (req, res) => {
+  // Importa um .toon como POP do ambiente; o nome do arquivo vira o slug do POP.
+  app.post('/api/environments/:env/pops/import', (req, res) => {
+    const env = req.params.env;
+    envName(cfg, env);
     const body = ImportBody.safeParse(req.body);
     if (!body.success) throw new HttpError(400, 'corpo inválido: esperado { filename, toon, replace? }');
     const m = IMPORT_NAME.exec(body.data.filename);
-    if (!m) throw new HttpError(400, 'nome de arquivo inválido: use só letras minúsculas, números e hífen, com a extensão .toon (ex.: quarto.toon)');
+    if (!m) throw new HttpError(400, 'nome de arquivo inválido: use só letras minúsculas, números e hífen, com a extensão .toon (ex.: rapido.toon)');
     const slug = m[1];
     let pop;
     try { pop = parsePop(body.data.toon, body.data.filename); }
@@ -93,20 +117,19 @@ export function createApp(cfg: Config) {
       if (e instanceof PopError) throw new HttpError(400, e.message, { problem: e.problem });
       throw e;
     }
-    const existing = readPopText(cfg.popsDir, slug);
+    const existing = readPopText(cfg.popsDir, env, slug);
     if (existing !== null && !body.data.replace) {
       let name = slug;
-      try { name = parsePop(existing, `${slug}.toon`).ambiente; } catch { /* arquivo atual inválido: mostra o slug */ }
-      throw new HttpError(409, `já existe o ambiente "${name}"`, { slug, name });
+      try { name = parsePop(existing, `${slug}.toon`).nome ?? slug; } catch { /* arquivo atual inválido: mostra o slug */ }
+      throw new HttpError(409, `já existe o POP "${name}"`, { slug, name });
     }
-    writePopText(cfg.popsDir, slug, body.data.toon);
-    res.status(existing === null ? 201 : 200).json({ slug, name: pop.ambiente, replaced: existing !== null });
+    writePopText(cfg.popsDir, env, slug, body.data.toon);
+    res.status(existing === null ? 201 : 200).json({ slug, name: pop.nome ?? slug, replaced: existing !== null });
   });
 
   app.get('/api/dashboard', (_req, res) => {
     const { agenda, error } = readAgenda(cfg.agendaFile);
-    const names = new Map(listEnvironments(cfg.popsDir).flatMap((e) => (e.name ? [[e.slug, e.name] as const] : [])));
-    res.json({ agenda, agendaError: error ?? null, recent: recentCleanings(cfg, names) });
+    res.json({ agenda, agendaError: error ?? null, recent: recentCleanings(cfg) });
   });
   app.get('/api/agenda.toon', (_req, res) => {
     res.attachment('agenda.toon').type('text/plain; charset=utf-8').send(readAgendaText(cfg.agendaFile) ?? '');

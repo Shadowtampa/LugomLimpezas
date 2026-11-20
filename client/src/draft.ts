@@ -4,7 +4,9 @@ import { previewView } from './progress.ts';
 // Rascunho da limpeza em andamento: só uma lista de eventos com horário, guardada no localStorage.
 // Vai ao servidor num único envio ao finalizar ou abandonar; lá os tempos são recalculados (mesma regra de replay).
 export type Evento = { tipo: 'inicio' | 'feito' | 'desmarcar' | 'pausa' | 'retomada' | 'abandono'; atividade?: string; em: string };
-export type Draft = { id: string; ambiente: string; eventos: Evento[] };
+// `pop` falta nos rascunhos abertos antes de existir mais de um POP: vale o "completo".
+export type Draft = { id: string; ambiente: string; pop?: string; eventos: Evento[] };
+export const draftPop = (d: Draft) => d.pop ?? 'completo';
 
 const key = (slug: string) => `limpeza:${slug}`;
 
@@ -37,7 +39,7 @@ export function newId() {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
-export const startDraft = (ambiente: string, at = Date.now()): Draft => ({ id: newId(), ambiente, eventos: [{ tipo: 'inicio', em: new Date(at).toISOString() }] });
+export const startDraft = (ambiente: string, pop: string, at = Date.now()): Draft => ({ id: newId(), ambiente, pop, eventos: [{ tipo: 'inicio', em: new Date(at).toISOString() }] });
 
 // O horário nunca anda para trás (relógio do aparelho ajustado): o servidor recusa eventos fora de ordem.
 export function addEvent(d: Draft, tipo: Evento['tipo'], atividade?: string, at = Date.now()): Draft {
@@ -78,7 +80,7 @@ export function draftView(pop: PopView, records: Record<string, number>, d: Draf
     }),
   }));
   const done = etapas.flatMap((e) => e.atividades).filter((a) => a.done).length;
-  return { ...base, id: d.id, environment: d.ambiente, startedAt: d.eventos[0].em, activeMs: r.activeMs, running: r.running, etapas, progress: { done, total: base.progress.total } };
+  return { ...base, id: d.id, environment: d.ambiente, pop: draftPop(d), startedAt: d.eventos[0].em, activeMs: r.activeMs, running: r.running, etapas, progress: { done, total: base.progress.total } };
 }
 
 // O que falta enviar: abandono pedido, ou tudo marcado (R7). null = a limpeza segue em andamento.

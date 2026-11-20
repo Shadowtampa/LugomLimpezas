@@ -9,7 +9,7 @@ const s = (n: number) => n * 1000;
 const A = 'Retirar copos, garrafas, pratos e utensílios de alimentação.';
 
 const find = (v: any, task: string) => v.etapas.flatMap((e: any) => e.atividades).find((a: any) => a.text === task);
-const records = async (c: ReturnType<typeof makeApp>, slug = 'escritorio') => (await request(c.app).get(`/api/environments/${slug}/records`)).body;
+const records = async (c: ReturnType<typeof makeApp>, slug = 'escritorio') => (await request(c.app).get(`/api/environments/${slug}/pops/completo/records`)).body;
 
 describe('recordes', () => {
   it('é a menor volta de OUTRAS limpezas (qualquer status) e a diferença sai da comparação', async () => {
@@ -36,7 +36,7 @@ describe('recordes', () => {
   it('mudar o texto da atividade no POP cria uma atividade nova, sem recorde', async () => {
     const c = makeApp();
     await abandoned(c, 30, [[30, A]]);
-    const file = join(c.popsDir, 'escritorio.toon');
+    const file = join(c.popsDir, 'escritorio', 'completo.toon');
     writeFileSync(file, readFileSync(file, 'utf8').replace(A, 'Retirar copos e pratos.'));
     expect((await records(c))['Retirar copos e pratos.']).toBeUndefined();
   });

@@ -32,9 +32,9 @@ describe('notas do ambiente', () => {
 
   it('as notas vão no prompt para a IA, mesmo sem comentários de limpeza; sem nada continua 409', async () => {
     const c = makeApp();
-    expect((await request(c.app).get('/api/environments/escritorio/prompt-ia')).status).toBe(409);
+    expect((await request(c.app).get('/api/environments/escritorio/pops/completo/prompt-ia')).status).toBe(409);
     await request(c.app).post('/api/environments/escritorio/notes').send({ text: 'Organizar a penteadeira.' });
-    const r = await request(c.app).get('/api/environments/escritorio/prompt-ia');
+    const r = await request(c.app).get('/api/environments/escritorio/pops/completo/prompt-ia');
     expect(r.status).toBe(200);
     expect(r.text).not.toContain('Meus comentários das limpezas');
     const block = /# Minhas notas[^\n]*\n```toon\n([\s\S]*?)\n```/.exec(r.text)![1];

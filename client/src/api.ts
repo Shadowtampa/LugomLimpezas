@@ -1,7 +1,8 @@
 export type PopProblem = { file: string; line?: number; message: string };
-export type EnvironmentItem = { slug: string; name?: string; error?: PopProblem };
+export type PopItem = { slug: string; name?: string; error?: PopProblem };
+export type EnvironmentItem = { slug: string; name: string; pops: PopItem[] };
 
-export type PopView = { ambiente: string; etapas: { titulo: string; objetivo: string; aviso?: string; atividades: { texto: string; descricao?: string }[] }[] };
+export type PopView = { ambiente?: string; nome?: string; etapas: { titulo: string; objetivo: string; aviso?: string; atividades: { texto: string; descricao?: string }[] }[] };
 export type Atividade = { text: string; descricao?: string; done: boolean; lapMs?: number; recordMs?: number; deltaMs?: number };
 export type Etapa = { titulo: string; objetivo: string; aviso?: string; atividades: Atividade[] };
 export type CleaningResult = {
@@ -15,6 +16,8 @@ export type CleaningView = {
   id: string;
   environment: string;
   environmentName: string;
+  pop?: string;
+  popName?: string;
   status: 'in_progress' | 'completed' | 'abandoned';
   startedAt: string;
   activeMs: number;
@@ -32,6 +35,7 @@ export type DashboardView = {
     id: string;
     environment: string;
     environmentName: string;
+    pop: string;
     status: "in_progress" | "completed" | "abandoned";
     startedAt: string;
     endedAt: string | null;
@@ -40,6 +44,8 @@ export type DashboardView = {
 };
 export type HistoryItem = {
   id: string;
+  pop: string;
+  popName: string;
   startedAt: string;
   status: 'in_progress' | 'completed' | 'abandoned';
   score: number | null;
@@ -50,8 +56,7 @@ export type HistoryItem = {
 export type EnvironmentView = {
   slug: string;
   name: string;
-  total: number;
-  fastestMs: number | null;
+  pops: (PopItem & { total?: number; fastestMs?: number | null })[];
   history: HistoryItem[];
   notes: { id: string; text: string; createdAt: string }[];
 };

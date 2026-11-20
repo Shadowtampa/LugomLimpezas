@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type DashboardView, type EnvironmentItem } from './api.ts';
-import { allDrafts } from './draft.ts';
+import { allDrafts, draftPop } from './draft.ts';
 import { formatDate, formatDuration } from './format.ts';
 import { completedOn, DAY_LONG, DAY_SHORT, weekOf } from './week.ts';
 
@@ -14,12 +14,19 @@ export function Dashboard({ envs }: { envs: EnvironmentItem[] | null }) {
   if (error) return <p role="alert" className="erro">{error}</p>;
   if (!d) return <p aria-busy="true">Carregando…</p>;
 
-  const names = new Map((envs ?? []).flatMap((e) => (e.name ? [[e.slug, e.name] as const] : [])));
-  const nameOf = (slug: string) => names.get(slug) ?? slug;
+  // Entrada da agenda: "ambiente" ou "ambiente/pop".
+  const byEnv = new Map((envs ?? []).map((e) => [e.slug, e]));
+  const parts = (entry: string) => { const [env, pop] = entry.split('/'); return { env, pop, e: byEnv.get(env) }; };
+  const nameOf = (entry: string) => {
+    const { env, pop, e } = parts(entry);
+    if (!e) return entry;
+    return pop ? `${e.name} · ${e.pops.find((p) => p.slug === pop)?.name ?? pop}` : (e.name ?? env);
+  };
+  const linkOf = (entry: string) => { const { env, pop } = parts(entry); return pop ? `#/a/${env}/p/${pop}` : `#/a/${env}`; };
   const week = weekOf(new Date());
   const today = week.find((w) => w.isToday)!;
   const doneToday = completedOn(d.recent, today.day);
-  const running = new Set(allDrafts().map((x) => x.ambiente)); // em andamento = rascunho neste aparelho
+  const running = new Set(allDrafts().flatMap((x) => [x.ambiente, `${x.ambiente}/${draftPop(x)}`])); // em andamento = rascunho neste aparelho
   const planned = d.agenda[today.key];
 
   return (
@@ -37,7 +44,7 @@ export function Dashboard({ envs }: { envs: EnvironmentItem[] | null }) {
           <ul className="sugestoes">
             {planned.map((slug) => (
               <li key={slug}>
-                {names.has(slug) ? <a href={`#/a/${slug}`}>{nameOf(slug)}</a> : <span>{slug} <small className="muted">(ambiente não encontrado)</small></span>}
+                {parts(slug).e ? <a href={linkOf(slug)}>{nameOf(slug)}</a> : <span>{slug} <small className="muted">(ambiente não encontrado)</small></span>}
                 {doneToday.has(slug) && <span className="selo feita">✓ Concluída hoje</span>}
                 {!doneToday.has(slug) && running.has(slug) && <span className="selo andamento">▶ Em andamento</span>}
               </li>

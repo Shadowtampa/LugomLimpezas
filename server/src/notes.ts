@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Deps } from './cleanings.ts';
 import { HttpError } from './http.ts';
-import { readPopText } from './pops.ts';
+import { envName } from './environments.ts';
 
 export type Note = { id: string; text: string; createdAt: string };
 
@@ -12,7 +12,7 @@ export function listNotes(d: Deps, slug: string): Note[] {
 }
 
 export function addNote(d: Deps, slug: string, text: string): Note {
-  if (readPopText(d.popsDir, slug) === null) throw new HttpError(404, 'ambiente não encontrado');
+  envName(d, slug);
   const note = { id: randomUUID(), text, createdAt: new Date(d.now ? d.now() : Date.now()).toISOString() };
   d.db.prepare('INSERT INTO environment_notes (id, environment, text, created_at) VALUES (?, ?, ?, ?)').run(note.id, slug, text, note.createdAt);
   return note;

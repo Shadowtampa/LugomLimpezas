@@ -20,10 +20,10 @@ it('só limpezas concluídas no dia contam como feitas', () => {
   const at = (d: Date) => d.toISOString();
   const day = new Date(2026, 10, 12, 10, 0);
   const recent = [
-    { environment: 'escritorio', status: 'completed', startedAt: at(day), endedAt: at(new Date(2026, 10, 12, 11, 0)) },
+    { environment: 'escritorio', pop: 'rapido', status: 'completed', startedAt: at(day), endedAt: at(new Date(2026, 10, 12, 11, 0)) },
     { environment: 'quarto', status: 'abandoned', startedAt: at(day), endedAt: at(new Date(2026, 10, 12, 11, 0)) },
     { environment: 'banheiro', status: 'in_progress', startedAt: at(day), endedAt: null },
     { environment: 'outro', status: 'completed', startedAt: at(day), endedAt: at(new Date(2026, 10, 13, 9, 0)) },
   ];
-  expect([...completedOn(recent, localDay(day))]).toEqual(['escritorio']);
+  expect([...completedOn(recent, localDay(day))]).toEqual(['escritorio', 'escritorio/rapido']);
 });

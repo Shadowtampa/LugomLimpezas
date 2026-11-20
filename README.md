@@ -52,11 +52,18 @@ quiser; nunca toca em `data/`.
 
 ## Formato dos POPs (TOON)
 
-Cada arquivo `<slug>.toon` na pasta de POPs é um ambiente. O nome do arquivo é o
-endereço, e `ambiente` é o nome exibido.
+Um ambiente (nome e slug) fica no banco e pode ter vários POPs. Cada POP é o
+arquivo `<ambiente>/<pop>.toon` na pasta de POPs; o nome do arquivo é o endereço
+do POP e `nome` é o nome exibido (ex.: Completo, Rápido). Ambientes são criados
+pela tela inicial; POPs são criados, importados e editados na tela do ambiente.
+
+Na primeira inicialização depois da atualização, cada arquivo antigo
+`<slug>.toon` vira o ambiente `<slug>` com o POP `completo.toon` (com
+`nome: Completo` no topo); o nome do ambiente sai do campo `ambiente` e o arquivo
+original fica guardado como `<slug>.toon.migrado`.
 
 ```toon
-ambiente: Escritório
+nome: Completo
 etapas[2]:
   - titulo: Desocupação e preparação do ambiente
     objetivo: liberar as superfícies e preparar o ambiente para a limpeza.
@@ -99,5 +106,5 @@ sabado[2]: escritorio,banheiro-escritorio
 ```
 
 Chaves: `domingo`, `segunda`, `terca`, `quarta`, `quinta`, `sexta`, `sabado` (sem
-acento; chave desconhecida é erro). Os valores são nomes de arquivo de ambiente,
-sem `.toon`.
+acento; chave desconhecida é erro). Os valores são o slug do ambiente (qualquer
+POP) ou `ambiente/pop` (ex.: `quarto/rapido`) para sugerir um POP.

@@ -19,7 +19,7 @@ describe('abandonar', () => {
   it('as voltas da abandonada continuam valendo para os recordes', async () => {
     const c = makeApp();
     await abandoned(c, 30, [[25, A]]);
-    expect((await request(c.app).get('/api/environments/escritorio/records')).body[A]).toBe(s(25));
+    expect((await request(c.app).get('/api/environments/escritorio/pops/completo/records')).body[A]).toBe(s(25));
   });
 });
 
@@ -27,7 +27,7 @@ describe('excluir limpeza abandonada', () => {
   it('exclui só abandonada, apaga as voltas (e os recordes delas) e dá 404 depois', async () => {
     const c = makeApp();
     const first = (await abandoned(c, 40, [[30, A]])).body.id;
-    const records = async () => (await request(c.app).get('/api/environments/escritorio/records')).body;
+    const records = async () => (await request(c.app).get('/api/environments/escritorio/pops/completo/records')).body;
     expect(await records()).toEqual({ [A]: s(30) });
 
     expect((await request(c.app).delete(`/api/cleanings/${first}`)).status).toBe(204);
